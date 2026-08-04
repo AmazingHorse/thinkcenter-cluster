@@ -1,0 +1,10 @@
+---
+- name: reload udev
+  ansible.builtin.command:
+    cmd: udevadm control --reload-rules
+  changed_when: false
+
+- name: trigger udev
+  ansible.builtin.command:
+    cmd: udevadm trigger --subsystem-match=net --action=add
+  changed_when: false

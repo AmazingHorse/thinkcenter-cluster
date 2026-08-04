@@ -1,0 +1,36 @@
+# ── Boot assets (large binaries, fetched by script) ─────────────────────────
+boot/matchbox/assets/
+
+# ── Secrets & keys ───────────────────────────────────────────────────────────
+*.vault-pass
+*.age
+*.key
+.age-key*
+
+# ── Ansible generated ────────────────────────────────────────────────────────
+ansible/.retry
+ansible/**/*.retry
+*.retry
+
+# ── Python / Ansible venv ────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ansible/
+
+# ── Terraform ────────────────────────────────────────────────────────────────
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/override.tf
+terraform/override.tf.json
+
+# ── Editor / OS noise ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json

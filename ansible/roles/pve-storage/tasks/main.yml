@@ -1,0 +1,30 @@
+---
+- name: Set ZFS ARC max (cap memory usage)
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/zfs.conf
+    line: "options zfs zfs_arc_max={{ zfs_arc_max_mb | int * 1024 * 1024 }}"
+    regexp: "^options zfs zfs_arc_max"
+    create: true
+    mode: "0644"
+  notify: update initramfs
+
+- name: Configure Ceph OSD partition (interim_single_ssd profile)
+  when: storage_profile == 'interim_single_ssd'
+  block:
+    - name: Create partition 2 for Ceph OSD (if not already partitioned)
+      ansible.builtin.command:
+        cmd: >
+          parted -s {{ ceph_osd_disk }} --
+          mkpart primary 50% 100%
+      args:
+        creates: "{{ ceph_osd_partition }}"
+      # Note: partition 1 (ZFS rpool) was created by Proxmox installer.
+      # This creates partition 2 from 50% onward for Ceph.
+      # Adjust the percentage based on desired OS vs Ceph OSD split.
+
+- name: No additional partitioning needed (target_nvme_ssd profile)
+  when: storage_profile == 'target_nvme_ssd'
+  ansible.builtin.debug:
+    msg: >
+      target_nvme_ssd: NVMe is OS disk, SSD is whole-disk Ceph OSD.
+      No partitioning required by this role.

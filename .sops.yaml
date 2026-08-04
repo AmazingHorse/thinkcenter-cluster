@@ -1,0 +1,4 @@
+creation_rules:
+  - path_regex: ansible/secrets/.*\.yaml$
+    age: >-
+      age1REPLACE_WITH_YOUR_PUBLIC_KEY

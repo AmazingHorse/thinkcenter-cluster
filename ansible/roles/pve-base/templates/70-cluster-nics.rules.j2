@@ -1,0 +1,7 @@
+# Managed by Ansible — pve-base role
+# Assigns stable names to cluster NICs based on hardware bus path.
+# Do not edit manually; update host_vars/<node>/udev_rules instead.
+
+{% for rule in udev_rules %}
+SUBSYSTEM=="net", ACTION=="add", ENV{{{ rule.match_key }}}=="{{ rule.match_value }}", NAME="{{ rule.stable_name }}"
+{% endfor %}

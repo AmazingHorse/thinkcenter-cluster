@@ -1,0 +1,5 @@
+---
+- name: Configure storage
+  hosts: proxmox_nodes
+  roles:
+    - role: pve-storage

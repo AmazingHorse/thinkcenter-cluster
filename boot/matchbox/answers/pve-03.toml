@@ -1,0 +1,16 @@
+[global]
+keyboard = en-us
+country = us
+fqdn = pve-03.cluster.local
+mailto = ""
+timezone = America/New_York
+root_password = "REPLACE_WITH_SOPS_MANAGED_SECRET"
+
+[network]
+source = from-dhcp
+
+[disk-setup]
+filesystem = zfs
+zfs.raid = single
+# CONFIGURE: set to the disk device for this node (e.g. /dev/sda)
+disk_list = /dev/sda

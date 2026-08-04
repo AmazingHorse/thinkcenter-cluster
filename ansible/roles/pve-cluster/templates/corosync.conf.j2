@@ -1,0 +1,41 @@
+totem {
+    version: 2
+    cluster_name: {{ cluster_name }}
+    secauth: on
+    transport: knet
+
+    interface {
+        linknumber: 0
+        knet_transport: udp
+    }
+{% if corosync_ring1_iface is not none %}
+    interface {
+        linknumber: 1
+        knet_transport: udp
+    }
+{% endif %}
+}
+
+nodelist {
+{% for host in groups['proxmox_nodes'] %}
+    node {
+        name: {{ host }}
+        nodeid: {{ loop.index }}
+        ring0_addr: {{ hostvars[host]['ansible_host'] }}
+{% if corosync_ring1_iface is not none %}
+        ring1_addr: {{ hostvars[host]['ansible_host'] }}
+{% endif %}
+    }
+{% endfor %}
+}
+
+quorum {
+    provider: corosync_votequorum
+}
+
+logging {
+    to_logfile: yes
+    logfile: /var/log/corosync/corosync.log
+    to_syslog: yes
+    timestamp: on
+}

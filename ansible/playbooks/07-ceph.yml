@@ -1,0 +1,23 @@
+---
+# Ceph init — primary sets up MON/MGR, then all nodes add OSDs.
+
+- name: Initialize Ceph monitors and manager
+  hosts: proxmox_primary
+  roles:
+    - role: pve-ceph
+      vars:
+        ceph_action: init
+
+- name: Add Ceph OSDs on all nodes
+  hosts: proxmox_nodes
+  roles:
+    - role: pve-ceph
+      vars:
+        ceph_action: add_osd
+
+- name: Create Ceph pools and storage config
+  hosts: proxmox_primary
+  roles:
+    - role: pve-ceph
+      vars:
+        ceph_action: create_pools

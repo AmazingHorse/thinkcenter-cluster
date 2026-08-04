@@ -1,0 +1,12 @@
+---
+- name: Deploy /etc/network/interfaces
+  ansible.builtin.template:
+    src: interfaces.j2
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart networking
+
+- name: Apply network configuration
+  ansible.builtin.meta: flush_handlers

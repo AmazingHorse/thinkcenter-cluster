@@ -1,0 +1,6 @@
+---
+# pve-base role defaults — override in group_vars or host_vars
+
+pve_remove_enterprise_repo: true
+pve_add_no_subscription_repo: true
+pve_sdn_enabled: false

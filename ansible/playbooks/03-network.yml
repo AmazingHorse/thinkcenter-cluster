@@ -1,0 +1,5 @@
+---
+- name: Configure networking
+  hosts: proxmox_nodes
+  roles:
+    - role: pve-network

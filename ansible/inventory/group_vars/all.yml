@@ -1,0 +1,60 @@
+---
+# ── Version pins (single source of truth) ────────────────────────────────────
+# To upgrade: change these values, re-run boot/scripts/fetch-assets.sh,
+# then run the upgrade playbook with ha-manager drain.
+pve_version: "9.2"
+pve_iso_filename: "proxmox-ve_9.2-1.iso"
+pve_iso_sha256: "REPLACE_WITH_OFFICIAL_SHA256"
+pve_iso_url: "https://enterprise.proxmox.com/iso/{{ pve_iso_filename }}"
+ceph_version: "tentacle"   # 20.2.x, managed via pveceph
+
+# ── Cluster identity ──────────────────────────────────────────────────────────
+cluster_name: "thinkcenter"
+cluster_domain: "cluster.local"
+
+# ── Network — flat L2 POC ─────────────────────────────────────────────────────
+# Phase 1: flat L2. Phase 2: add vlan_id per interface. Phase 3: pve_sdn_enabled.
+management_subnet: "192.168.50.0/24"
+management_gateway: "192.168.50.1"
+boot_server_ip: "192.168.50.1"
+
+# VLAN stubs — null = untagged (POC). Set to a VLAN ID when Mikrotik is configured.
+vlan_id_mgmt: ~
+vlan_id_ceph: ~
+vlan_id_vm: ~
+
+# ── SDN ───────────────────────────────────────────────────────────────────────
+# Set to true when ready to configure Proxmox SDN (Phase 3).
+# Requires frr package (installed by pve-base but unconfigured when false).
+pve_sdn_enabled: false
+
+# ── NIC stable names (set by udev — see roles/pve-base/templates/70-cluster-nics.rules.j2)
+nic_mgmt: "eth-mgmt"
+nic_ceph: "eth-ceph"
+nic_vm: "eth-vm"
+
+# ── VM bridge ─────────────────────────────────────────────────────────────────
+# Abstracted so SDN VNet name can replace vmbr1 in Phase 3.
+vm_bridge: "vmbr1"
+
+# ── Ansible connection ────────────────────────────────────────────────────────
+ansible_user: root
+ansible_ssh_private_key_file: "~/.ssh/id_ed25519"
+
+# ── Proxmox no-subscription repo ─────────────────────────────────────────────
+pve_remove_enterprise_repo: true
+pve_add_no_subscription_repo: true
+
+# ── Corosync ──────────────────────────────────────────────────────────────────
+corosync_ring0_iface: "{{ nic_mgmt }}"
+corosync_ring1_iface: ~   # Set to nic name to add a second ring later
+
+# ── Ceph ──────────────────────────────────────────────────────────────────────
+ceph_network_cluster: "192.168.50.0/24"   # interim: same subnet; separate in Phase 2
+ceph_network_public: "192.168.50.0/24"
+ceph_pool_name: "ceph-vm"
+ceph_pool_replicas: 3   # one replica per node
+
+# ── HA manager ───────────────────────────────────────────────────────────────
+# Used by the rolling-upgrade task to safely drain a node before reboot.
+ha_manager_enabled: true

@@ -1,0 +1,37 @@
+# Managed by Ansible — pve-network role
+# Three-plane network: management/Corosync (eth-mgmt), Ceph (eth-ceph), VMs (eth-vm).
+# VLAN-ready: set vlan_id_* vars in group_vars to add tagging (Phase 2).
+# SDN-ready: vm_bridge var is abstracted for Phase 3.
+
+auto lo
+iface lo inet loopback
+
+# ── Management + Corosync ring 0 ─────────────────────────────────────────────
+auto {{ nic_mgmt }}
+iface {{ nic_mgmt }} inet static
+    address {{ ansible_host }}/24
+    gateway {{ management_gateway }}
+{% if vlan_id_mgmt is not none %}
+    vlan-id {{ vlan_id_mgmt }}
+{% endif %}
+
+# ── Ceph storage (raw, no bridge) ─────────────────────────────────────────────
+auto {{ nic_ceph }}
+iface {{ nic_ceph }} inet manual
+{% if vlan_id_ceph is not none %}
+    vlan-id {{ vlan_id_ceph }}
+{% endif %}
+
+# ── VM bridge (vmbr1 backed by eth-vm) ────────────────────────────────────────
+auto {{ nic_vm }}
+iface {{ nic_vm }} inet manual
+{% if vlan_id_vm is not none %}
+    vlan-id {{ vlan_id_vm }}
+{% endif %}
+
+auto {{ vm_bridge }}
+iface {{ vm_bridge }} inet manual
+    bridge-ports {{ nic_vm }}
+    bridge-stp off
+    bridge-fd 0
+    bridge-vlan-aware yes

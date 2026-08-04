@@ -1,0 +1,25 @@
+---
+# pve-03 — 8 GB RAM node
+# CONFIGURE: replace placeholder values with actual hardware details.
+
+node_mac: "AA:BB:CC:DD:EE:03"
+node_ram_mb: 8192
+
+storage_profile: "interim_single_ssd"
+os_disk: "/dev/sda"
+ceph_osd_disk: "/dev/sda"
+ceph_osd_partition: "/dev/sda2"
+
+# 15% of 8 GB ≈ 1228 MB
+zfs_arc_max_mb: 1228
+
+udev_rules:
+  - stable_name: eth-mgmt
+    match_key: ID_PATH
+    match_value: "pci-0000:00:1f.6"
+  - stable_name: eth-ceph
+    match_key: ID_PATH
+    match_value: "usb-0:REPLACE_USB_PATH:1.0"
+  - stable_name: eth-vm
+    match_key: ID_PATH
+    match_value: "pci-0000:01:00.0"

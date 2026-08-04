@@ -1,0 +1,33 @@
+# Boot server stack — matchbox + dnsmasq
+#
+# Run on a Linux host (or Hyper-V VM with External Switch on Windows).
+# Requires network_mode: host so dnsmasq can broadcast DHCP on the physical LAN.
+# See docs/windows-setup.md before running on Windows.
+
+services:
+
+  matchbox:
+    image: quay.io/poseidon/matchbox:latest
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./matchbox:/var/lib/matchbox:ro
+    command:
+      - -address=0.0.0.0:8080
+      - -log-level=info
+    # matchbox serves:
+    #   GET /metadata?mac=<MAC>   → per-node answer file URL
+    #   GET /assets/<file>        → PVE ISO, ipxe binaries
+
+  dnsmasq:
+    image: ghcr.io/jpillora/dnsmasq:latest
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:ro
+    # dnsmasq provides:
+    #   DHCP with static leases (MAC → IP)
+    #   TFTP root for iPXE binary
+    #   PXE option 66/67 pointing at matchbox HTTP

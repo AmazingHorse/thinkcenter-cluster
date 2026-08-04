@@ -1,0 +1,25 @@
+---
+# site.yml — master playbook
+# Imports all phases in dependency order.
+# Run individual playbooks for targeted changes (e.g. only ceph config).
+
+- name: Bootstrap nodes post-install
+  import_playbook: 01-bootstrap.yml
+
+- name: Configure Proxmox base
+  import_playbook: 02-proxmox-base.yml
+
+- name: Configure networking
+  import_playbook: 03-network.yml
+
+- name: Configure storage
+  import_playbook: 04-storage.yml
+
+- name: Initialize cluster
+  import_playbook: 05-cluster-init.yml
+
+- name: Configure Corosync
+  import_playbook: 06-corosync.yml
+
+- name: Initialize Ceph
+  import_playbook: 07-ceph.yml

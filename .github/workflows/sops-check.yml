@@ -1,0 +1,22 @@
+name: SOPS Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  sops-decrypt-check:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sops
+        run: |
+          curl -fsSL https://github.com/getsops/sops/releases/latest/download/sops-v3.x.linux.amd64 \
+            -o /usr/local/bin/sops && chmod +x /usr/local/bin/sops
+
+      - name: Verify SOPS can decrypt secrets
+        run: sops --decrypt ansible/secrets/vault.sops.yaml > /dev/null
+        env:
+          SOPS_AGE_KEY_FILE: ~/.config/sops/age/keys.txt

@@ -1,0 +1,38 @@
+---
+# pve-01 — 16 GB RAM node (primary / cluster bootstrapper)
+#
+# CONFIGURE: replace placeholder values with actual hardware details.
+# One-time discovery: boot a live Linux image and run:
+#   udevadm info /sys/class/net/<iface> | grep ID_PATH
+# to find bus paths for eth-ceph and eth-vm.
+
+node_mac: "AA:BB:CC:DD:EE:01"   # Built-in NIC MAC (used for PXE identity)
+node_ram_mb: 16384
+
+# ── Storage profile ───────────────────────────────────────────────────────────
+# interim_single_ssd : Proxmox OS on partition 1, Ceph OSD on partition 2
+# target_nvme_ssd    : Proxmox OS on NVMe, Ceph OSD on whole SSD
+storage_profile: "interim_single_ssd"
+
+# Disk identifiers (adjust if udev names differ on this node)
+os_disk: "/dev/sda"           # Used for ZFS rpool
+ceph_osd_disk: "/dev/sda"     # Same disk; pve-storage role partitions it
+ceph_osd_partition: "/dev/sda2"
+
+# ── ZFS ARC cap ───────────────────────────────────────────────────────────────
+# 15% of 16 GB ≈ 2457 MB. Adjust if VMs need more headroom.
+zfs_arc_max_mb: 2457
+
+# ── udev NIC bus paths ────────────────────────────────────────────────────────
+# CONFIGURE: replace with actual bus paths from udevadm on this node.
+# eth-mgmt is the built-in I219-LM; PCI path is fixed on M910q.
+udev_rules:
+  - stable_name: eth-mgmt
+    match_key: ID_PATH
+    match_value: "pci-0000:00:1f.6"          # M910q built-in I219-LM (verify)
+  - stable_name: eth-ceph
+    match_key: ID_PATH
+    match_value: "usb-0:REPLACE_USB_PATH:1.0" # USB NIC in designated port
+  - stable_name: eth-vm
+    match_key: ID_PATH
+    match_value: "pci-0000:01:00.0"           # WiFi-slot NIC (verify slot)

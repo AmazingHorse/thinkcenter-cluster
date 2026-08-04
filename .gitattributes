@@ -1,0 +1,17 @@
+# Force LF line endings in the working tree for all text files.
+# This repo is authored on Windows but runs on Linux nodes — CRLF in
+# shell scripts, Jinja templates, and TOML answer files will cause
+# silent failures on Linux.
+
+* text=auto eol=lf
+
+# Explicitly mark binary files to prevent corruption
+*.iso    binary
+*.kpxe   binary
+*.efi    binary
+*.png    binary
+*.jpg    binary
+*.gif    binary
+*.ico    binary
+*.zip    binary
+*.gz     binary

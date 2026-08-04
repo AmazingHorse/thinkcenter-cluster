@@ -1,0 +1,17 @@
+---
+# Cluster init — runs sequentially: primary first, then workers join.
+
+- name: Initialize cluster on primary node
+  hosts: proxmox_primary
+  roles:
+    - role: pve-cluster
+      vars:
+        cluster_action: create
+
+- name: Join remaining nodes to cluster
+  hosts: proxmox_workers
+  serial: 1   # Join one at a time to avoid split-brain
+  roles:
+    - role: pve-cluster
+      vars:
+        cluster_action: join

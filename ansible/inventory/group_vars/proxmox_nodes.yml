@@ -1,0 +1,14 @@
+---
+# Proxmox-node-specific group vars.
+# Per-node overrides (RAM, NICs, disks, storage_profile) live in host_vars/.
+
+# ZFS ARC cap — derived from per-node RAM in host_vars via pve-storage role.
+# Override here only if you want a cluster-wide flat cap.
+# zfs_arc_max_mb: 1024
+
+# Ceph OSD memory target (bytes) — 1 GB per OSD is recommended minimum.
+ceph_osd_memory_target: "1073741824"
+ceph_mon_memory_target: "536870912"   # 512 MB
+
+# Proxmox HA — enable on all nodes.
+pve_ha_enabled: true

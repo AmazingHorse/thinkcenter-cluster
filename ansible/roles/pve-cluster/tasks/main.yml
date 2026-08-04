@@ -1,0 +1,59 @@
+---
+# cluster_action: create | join | corosync_tune | disarm_ha | arm_ha
+
+- name: Create cluster (primary node only)
+  when: cluster_action == 'create'
+  block:
+    - name: Check if cluster already exists
+      ansible.builtin.command:
+        cmd: pvecm status
+      register: pvecm_status
+      changed_when: false
+      failed_when: false
+
+    - name: Initialize cluster
+      ansible.builtin.command:
+        cmd: "pvecm create {{ cluster_name }} --link0 {{ ansible_host }}"
+      when: "'cluster name' not in pvecm_status.stdout"
+
+- name: Join cluster (worker nodes)
+  when: cluster_action == 'join'
+  block:
+    - name: Check if already a member
+      ansible.builtin.command:
+        cmd: pvecm status
+      register: pvecm_status
+      changed_when: false
+      failed_when: false
+
+    - name: Join cluster via primary node
+      ansible.builtin.command:
+        cmd: >
+          pvecm add {{ hostvars[groups['proxmox_primary'][0]]['ansible_host'] }}
+          --link0 {{ ansible_host }}
+          --force
+      when: "'cluster name' not in pvecm_status.stdout"
+
+- name: Tune Corosync
+  when: cluster_action == 'corosync_tune'
+  block:
+    - name: Deploy corosync.conf
+      ansible.builtin.template:
+        src: corosync.conf.j2
+        dest: /etc/pve/corosync.conf
+        owner: root
+        group: www-data
+        mode: "0640"
+      notify: restart corosync
+
+- name: Disarm HA (safe maintenance drain)
+  when: cluster_action == 'disarm_ha'
+  ansible.builtin.command:
+    cmd: ha-manager disarm-ha
+  changed_when: true
+
+- name: Arm HA (re-enable after maintenance)
+  when: cluster_action == 'arm_ha'
+  ansible.builtin.command:
+    cmd: ha-manager arm-ha
+  changed_when: true

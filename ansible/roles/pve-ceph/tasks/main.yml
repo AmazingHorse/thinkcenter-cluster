@@ -1,0 +1,85 @@
+---
+# ceph_action: init | add_osd | create_pools
+
+- name: Initialize Ceph (monitors + manager)
+  when: ceph_action == 'init'
+  block:
+    - name: Install Ceph via pveceph
+      ansible.builtin.command:
+        cmd: "pveceph install --version {{ ceph_version }}"
+      args:
+        creates: /etc/ceph/ceph.conf
+
+    - name: Initialize Ceph cluster
+      ansible.builtin.command:
+        cmd: >
+          pveceph init
+          --network {{ ceph_network_cluster }}
+          --cluster-network {{ ceph_network_cluster }}
+      args:
+        creates: /etc/ceph/ceph.conf
+
+    - name: Create Ceph monitor on primary
+      ansible.builtin.command:
+        cmd: pveceph mon create
+      args:
+        creates: /var/lib/ceph/mon
+
+    - name: Create Ceph manager on primary
+      ansible.builtin.command:
+        cmd: pveceph mgr create
+      args:
+        creates: /var/lib/ceph/mgr
+
+    - name: Add monitors on remaining nodes
+      ansible.builtin.command:
+        cmd: pveceph mon create
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['proxmox_workers'] }}"
+
+- name: Add Ceph OSD on this node
+  when: ceph_action == 'add_osd'
+  block:
+    - name: Create OSD on Ceph partition / disk
+      ansible.builtin.command:
+        cmd: >
+          pveceph osd create
+          {% if storage_profile == 'interim_single_ssd' %}
+          {{ ceph_osd_partition }}
+          {% else %}
+          {{ ceph_osd_disk }}
+          {% endif %}
+      # idempotency: pveceph osd create is safe to re-run — fails gracefully if OSD exists
+      changed_when: true
+      register: osd_create
+      failed_when:
+        - osd_create.rc != 0
+        - "'already' not in osd_create.stderr"
+
+    - name: Set Ceph OSD memory target
+      ansible.builtin.command:
+        cmd: >
+          ceph config set osd osd_memory_target {{ ceph_osd_memory_target }}
+      changed_when: false
+
+    - name: Set Ceph monitor memory target
+      ansible.builtin.command:
+        cmd: >
+          ceph config set mon mon_memory_target {{ ceph_mon_memory_target }}
+      changed_when: false
+
+- name: Create Ceph pools and register storage
+  when: ceph_action == 'create_pools'
+  block:
+    - name: Create VM storage pool
+      ansible.builtin.command:
+        cmd: >
+          pveceph pool create {{ ceph_pool_name }}
+          --size {{ ceph_pool_replicas }}
+          --min_size {{ ceph_pool_replicas - 1 }}
+          --add_storages true
+      register: pool_create
+      changed_when: pool_create.rc == 0
+      failed_when:
+        - pool_create.rc != 0
+        - "'already exists' not in pool_create.stderr"

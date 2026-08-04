@@ -1,0 +1,16 @@
+{
+  "id": "pxe-proxmox",
+  "name": "Proxmox VE 9.2 Unattended Install",
+  "ignition_id": "",
+  "boot": {
+    "kernel": "/assets/proxmox-ve_9.2-1.iso",
+    "initrd": [],
+    "args": [
+      "auto=true",
+      "priority=critical",
+      "proxmox-auto-install-answer-file-url=http://{{ .request.query.MATCHBOX_SERVER }}/matchbox/answers/{{ .request.query.MATCHBOX_MAC }}.toml",
+      "proxmox-auto-install-answer-file-url-cert-fingerprint=",
+      "quiet"
+    ]
+  }
+}

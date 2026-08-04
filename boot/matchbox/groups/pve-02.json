@@ -1,0 +1,11 @@
+{
+  "id": "pve-02",
+  "name": "pve-02",
+  "profile": "pxe-proxmox",
+  "selector": {
+    "mac": "AA:BB:CC:DD:EE:02"
+  },
+  "metadata": {
+    "hostname": "pve-02"
+  }
+}

@@ -1,0 +1,29 @@
+# providers.tf.example — copy to providers.tf to activate Terraform.
+# Requires: proxmox_api_token_id and proxmox_api_token_secret from SOPS vault.
+
+terraform {
+  required_providers {
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = "~> 0.66"
+    }
+  }
+}
+
+provider "proxmox" {
+  endpoint  = "https://192.168.50.10:8006/"   # pve-01 (primary)
+  api_token = "${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}"
+  insecure  = true   # Set to false when you have a valid TLS cert
+}
+
+variable "proxmox_api_token_id" {
+  description = "Proxmox API token ID (from SOPS vault)"
+  type        = string
+  sensitive   = true
+}
+
+variable "proxmox_api_token_secret" {
+  description = "Proxmox API token secret (from SOPS vault)"
+  type        = string
+  sensitive   = true
+}

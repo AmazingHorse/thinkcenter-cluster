@@ -1,0 +1,7 @@
+---
+- name: Configure Corosync
+  hosts: proxmox_nodes
+  roles:
+    - role: pve-cluster
+      vars:
+        cluster_action: corosync_tune
