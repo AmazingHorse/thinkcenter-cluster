@@ -1,7 +1,7 @@
 [global]
 keyboard = en-us
 country = us
-fqdn = pve-02.cluster.local
+fqdn = pve03.cluster.local
 mailto = ""
 timezone = America/New_York
 root_password = "REPLACE_WITH_SOPS_MANAGED_SECRET"

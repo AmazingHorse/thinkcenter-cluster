@@ -1,5 +1,5 @@
 ---
-# pve-01 — 16 GB RAM node (primary / cluster bootstrapper)
+# pve01 — 16 GB RAM node (primary / cluster bootstrapper)
 #
 # CONFIGURE: replace placeholder values with actual hardware details.
 # One-time discovery: boot a live Linux image and run:
@@ -20,16 +20,16 @@ ceph_osd_partition: "/dev/sda2"
 zfs_arc_max_mb: 2457
 
 # ── Cluster fabric — direct peer links ────────────────────────────────────────
-# eth-cluster-a (USB NIC) connects directly to pve-02
-# eth-cluster-b (WiFi-slot NIC) connects directly to pve-03
-# Subnets: pve-01↔pve-02 = 10.10.12.0/30, pve-01↔pve-03 = 10.10.13.0/30
+# eth-cluster-a (USB NIC) connects directly to pve02
+# eth-cluster-b (WiFi-slot NIC) connects directly to pve03
+# Subnets: pve01↔pve02 = 10.10.12.0/30, pve01↔pve03 = 10.10.13.0/30
 cluster_links:
   - iface: eth-cluster-a
-    peer: pve-02
+    peer: pve02
     local_ip: "10.10.12.1"
     prefix: 30
   - iface: eth-cluster-b
-    peer: pve-03
+    peer: pve03
     local_ip: "10.10.13.1"
     prefix: 30
 

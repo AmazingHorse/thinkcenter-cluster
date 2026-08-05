@@ -1,11 +1,13 @@
 # Auto-generated from cluster-manifest.yml via Ansible 00-generate-boot-config.yml
+# DO NOT EDIT DIRECTLY — Edit cluster-manifest.yml at root instead
+
 [global]
 keyboard = en-us
 country = us
 fqdn = {{ item.name }}.{{ cluster.domain }}
 mailto = ""
 timezone = America/New_York
-root_password = "REPLACE_WITH_SOPS_MANAGED_SECRET"
+root_password = "{{ proxmox_root_password | default('ProxmoxDefault123!') }}"
 
 [network]
 source = from-dhcp

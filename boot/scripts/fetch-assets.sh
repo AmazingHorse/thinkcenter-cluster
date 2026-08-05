@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 # fetch-assets.sh — download and verify Proxmox VE ISO + iPXE binaries
-# Run this before starting the boot stack.
-# Requires: curl, sha256sum
+# Reads version and SHA256 directly from cluster-manifest.yml
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFEST_FILE="${SCRIPT_DIR}/../../cluster-manifest.yml"
 ASSETS_DIR="${SCRIPT_DIR}/../matchbox/assets"
 mkdir -p "${ASSETS_DIR}"
 
-# ── Version pin (keep in sync with ansible/inventory/group_vars/all.yml) ─────
-PVE_ISO="proxmox-ve_9.2-1.iso"
+# ── Parse manifest ────────────────────────────────────────────────────────────
+if [[ -f "${MANIFEST_FILE}" ]]; then
+  PVE_VERSION=$(grep 'pve_version:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+  PVE_SHA256=$(grep 'pve_iso_sha256:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+else
+  PVE_VERSION="9.2"
+  PVE_SHA256="REPLACE_WITH_OFFICIAL_SHA256"
+fi
+
+PVE_ISO="proxmox-ve_${PVE_VERSION}-1.iso"
 PVE_URL="https://enterprise.proxmox.com/iso/${PVE_ISO}"
-# CONFIGURE: update sha256 from https://www.proxmox.com/en/downloads
-PVE_SHA256="REPLACE_WITH_OFFICIAL_SHA256"
 
 IPXE_URL="https://boot.ipxe.org/undionly.kpxe"
 IPXE_EFI_URL="https://boot.ipxe.org/ipxe.efi"
@@ -31,9 +37,9 @@ fetch_if_missing() {
 
 verify_sha256() {
   local file="$1" expected="$2"
-  if [[ "${expected}" == "REPLACE_WITH_OFFICIAL_SHA256" ]]; then
-    echo "  [warn] SHA256 not configured — skipping verification for $(basename "${file}")"
-    echo "         Update PVE_SHA256 in this script and re-run to enable verification."
+  if [[ "${expected}" == "REPLACE_WITH_OFFICIAL_SHA256" || -z "${expected}" ]]; then
+    echo "  [warn] SHA256 not configured in cluster-manifest.yml — skipping verification for $(basename "${file}")"
+    echo "         Update pve_iso_sha256 in cluster-manifest.yml to enable verification."
     return 0
   fi
   echo "  [verify] $(basename "${file}")"
@@ -42,7 +48,7 @@ verify_sha256() {
 }
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
-echo "==> Fetching Proxmox VE ISO"
+echo "==> Fetching Proxmox VE ISO (${PVE_ISO})"
 fetch_if_missing "${PVE_URL}" "${ASSETS_DIR}/${PVE_ISO}"
 verify_sha256 "${ASSETS_DIR}/${PVE_ISO}" "${PVE_SHA256}"
 

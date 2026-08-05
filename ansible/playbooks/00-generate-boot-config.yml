@@ -1,15 +1,19 @@
 ---
-# 00-generate-boot-config.yml — Render boot server configs natively via Ansible
-# Reads cluster-manifest.yml (or inventory host_vars) and renders dnsmasq + matchbox configs.
+# 00-generate-boot-config.yml — Render boot server configs & host_vars from cluster-manifest.yml
 
-- name: Render Boot Server Configurations
+- name: Render Boot & Inventory Configurations
   hosts: localhost
   connection: local
   gather_facts: false
   vars_files:
     - "../../cluster-manifest.yml"
   tasks:
-    - name: Ensure boot server config directories exist
+    - name: Load secrets if available
+      ansible.builtin.include_vars:
+        file: "../secrets/vault.sops.yaml"
+        ignore_missing: true
+
+    - name: Ensure config & inventory directories exist
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -18,6 +22,7 @@
         - "../../boot/dnsmasq"
         - "../../boot/matchbox/groups"
         - "../../boot/matchbox/answers"
+        - "../inventory/host_vars"
 
     - name: Render dnsmasq.conf
       ansible.builtin.template:
@@ -36,5 +41,12 @@
       ansible.builtin.template:
         src: "../roles/pve-base/templates/proxmox-answer.toml.j2"
         dest: "../../boot/matchbox/answers/{{ item.name }}.toml"
+        mode: "0644"
+      loop: "{{ nodes }}"
+
+    - name: Render Ansible host_vars per node from manifest
+      ansible.builtin.template:
+        src: "../roles/pve-base/templates/host_vars.yml.j2"
+        dest: "../inventory/host_vars/{{ item.name }}.yml"
         mode: "0644"
       loop: "{{ nodes }}"

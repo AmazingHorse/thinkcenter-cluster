@@ -1,7 +1,7 @@
 ---
-# ── Version pins (single source of truth) ────────────────────────────────────
-# To upgrade: change these values, re-run boot/scripts/fetch-assets.sh,
-# then run the upgrade playbook with ha-manager drain.
+# ── Version pins (single source of truth: cluster-manifest.yml) ──────────────
+# All node hardware specs and subnets are rendered directly from cluster-manifest.yml
+# via ansible/playbooks/00-generate-boot-config.yml.
 pve_version: "9.2"
 pve_iso_filename: "proxmox-ve_9.2-1.iso"
 pve_iso_sha256: "REPLACE_WITH_OFFICIAL_SHA256"

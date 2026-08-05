@@ -55,7 +55,7 @@ Ceph Tentacle for shared storage. Corosync 3-node quorum.
 | `eth-cluster-a` | USB 2.5G | Cluster fabric (Ceph + Corosync ring 1) | Direct cable to one peer node |
 | `eth-cluster-b` | WiFi-slot 2.5G | Cluster fabric (Ceph + Corosync ring 1) | Direct cable to other peer node |
 
-Full mesh: pve-01↔pve-02 (one cable), pve-01↔pve-03 (one cable), pve-02↔pve-03 (one cable).
+Full mesh: pve01↔pve02 (one cable), pve01↔pve03 (one cable), pve02↔pve03 (one cable).
 IP subnets: 10.10.12.0/30, 10.10.13.0/30, 10.10.23.0/30. OSPF via frr routes between them.
 
 USB NIC **must** be in the same physical USB port on every node (runbook enforces this).

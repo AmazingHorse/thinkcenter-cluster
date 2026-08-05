@@ -20,6 +20,6 @@
         path: /etc/hosts
         marker: "# {mark} ANSIBLE MANAGED — cluster nodes"
         block: |
-          192.168.50.10 pve-01 pve-01.cluster.local
-          192.168.50.11 pve-02 pve-02.cluster.local
-          192.168.50.12 pve-03 pve-03.cluster.local
+          192.168.50.10 pve01 pve01.cluster.local
+          192.168.50.11 pve02 pve02.cluster.local
+          192.168.50.12 pve03 pve03.cluster.local

@@ -11,7 +11,7 @@ terraform {
 }
 
 provider "proxmox" {
-  endpoint  = "https://192.168.50.10:8006/"   # pve-01 (primary)
+  endpoint  = "https://192.168.50.10:8006/"   # pve01 (primary)
   api_token = "${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}"
   insecure  = true   # Set to false when you have a valid TLS cert
 }

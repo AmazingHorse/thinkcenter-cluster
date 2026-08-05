@@ -66,7 +66,7 @@ graduate to `evpn` when you're comfortable with BGP concepts.
        |
   ┌────┴────┐
   │         │
-pve-01   pve-02   pve-03
+pve01   pve02   pve03
 (VTEP)   (VTEP)   (VTEP)
   │         │         │
   └─── VXLAN overlay ─┘

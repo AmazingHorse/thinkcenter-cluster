@@ -97,8 +97,8 @@ cd thinkcenter-cluster
 
 # Configure your node MACs and IPs
 nano boot/dnsmasq/dnsmasq.conf     # set interface=, MAC leases, boot_server_ip
-nano boot/matchbox/groups/pve-01.json  # set real MAC
-# repeat for pve-02, pve-03
+nano boot/matchbox/groups/pve01.json  # set real MAC
+# repeat for pve02, pve03
 
 # Fetch PVE ISO and iPXE binaries
 bash boot/scripts/fetch-assets.sh

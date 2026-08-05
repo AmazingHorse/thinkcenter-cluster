@@ -1,9 +1,9 @@
 ---
-# pve-03 — 8 GB RAM node
-# eth-cluster-a connects to pve-01, eth-cluster-b connects to pve-02
+# pve02 — 8 GB RAM node
+# eth-cluster-a connects to pve01, eth-cluster-b connects to pve03
 # CONFIGURE: replace placeholder values.
 
-node_mac: "AA:BB:CC:DD:EE:03"
+node_mac: "AA:BB:CC:DD:EE:02"
 node_ram_mb: 8192
 
 storage_profile: "interim_single_ssd"
@@ -15,15 +15,15 @@ zfs_arc_max_mb: 1228
 
 cluster_links:
   - iface: eth-cluster-a
-    peer: pve-01
-    local_ip: "10.10.13.2"
+    peer: pve01
+    local_ip: "10.10.12.2"
     prefix: 30
   - iface: eth-cluster-b
-    peer: pve-02
-    local_ip: "10.10.23.2"
+    peer: pve03
+    local_ip: "10.10.23.1"
     prefix: 30
 
-corosync_ring1_addr: "10.10.13.2"
+corosync_ring1_addr: "10.10.12.2"
 
 udev_rules:
   - stable_name: eth-mgmt

@@ -12,20 +12,20 @@ For agent context, see [`.agents/AGENTS.md`](../.agents/AGENTS.md).
 ```
 Physical cabling (3 cables, no cluster switch):
 
-  pve-01 [eth-cluster-a / USB]       ─────── [eth-cluster-a / USB]       pve-02
-  pve-01 [eth-cluster-b / WiFi-slot] ─────── [eth-cluster-a / USB]       pve-03
-                          pve-02 [eth-cluster-b / WiFi-slot] ─────── [eth-cluster-b / WiFi-slot] pve-03
+  pve01 [eth-cluster-a / USB]       ─────── [eth-cluster-a / USB]       pve02
+  pve01 [eth-cluster-b / WiFi-slot] ─────── [eth-cluster-a / USB]       pve03
+                          pve02 [eth-cluster-b / WiFi-slot] ─────── [eth-cluster-b / WiFi-slot] pve03
 
   All nodes → LAN switch via eth-mgmt (1G built-in, management + Corosync ring 0 + VMs shared)
 ```
 
 #### IP Addressing
 
-| Link | Subnet | pve-01 | pve-02 | pve-03 |
+| Link | Subnet | pve01 | pve02 | pve03 |
 |---|---|---|---|---|
-| pve-01 ↔ pve-02 | 10.10.12.0/30 | .1 (eth-cluster-a) | .2 (eth-cluster-a) | — |
-| pve-01 ↔ pve-03 | 10.10.13.0/30 | .1 (eth-cluster-b) | — | .2 (eth-cluster-a) |
-| pve-02 ↔ pve-03 | 10.10.23.0/30 | — | .1 (eth-cluster-b) | .2 (eth-cluster-b) |
+| pve01 ↔ pve02 | 10.10.12.0/30 | .1 (eth-cluster-a) | .2 (eth-cluster-a) | — |
+| pve01 ↔ pve03 | 10.10.13.0/30 | .1 (eth-cluster-b) | — | .2 (eth-cluster-a) |
+| pve02 ↔ pve03 | 10.10.23.0/30 | — | .1 (eth-cluster-b) | .2 (eth-cluster-b) |
 
 #### Routing
 
