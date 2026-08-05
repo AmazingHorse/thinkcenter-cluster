@@ -8,10 +8,10 @@ cluster:
   ceph_version: "tentacle"
   management_subnet: "192.168.50.0/24"
   management_gateway: "192.168.50.1"      # Your router IP
-  boot_server_ip: "192.168.50.1"          # Your workstation IP running boot stack
+  boot_server_ip: "192.168.50.191"          # Your workstation IP running boot stack
 
   # COLLECT: Copy SHA256 from https://www.proxmox.com/en/downloads
-  pve_iso_sha256: "REPLACE_WITH_OFFICIAL_SHA256"
+  pve_iso_sha256: "4e88fe416df9b527624a175f24c9aa07c714d3332afb1ee3dbf3879573ef2c6c"
 
 # ------------------------------------------------------------------------------
 # SECTION 2: NODE HARDWARE INVENTORY & TOPOLOGY
@@ -22,7 +22,7 @@ nodes:
   # ============================================================================
   - name: "pve01"
     # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
-    mac: "AA:BB:CC:DD:EE:01"
+    mac: "80:86:F2:18:55:B6"
     ip: "192.168.50.10"
     ram_mb: 16384
     storage_profile: "interim_single_ssd"   # "interim_single_ssd" or "target_nvme_ssd" when nvme present

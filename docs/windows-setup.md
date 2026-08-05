@@ -54,55 +54,67 @@ After install, note the VM's IP address — it will be on the same subnet as you
 
 ---
 
-## Step 4 — Install Docker in the Boot Server VM
+## Step 4 — Install Docker, Git, Bash & Ansible in the Boot Server VM
 
-SSH into the VM, then:
+SSH into the VM, then install required prerequisites:
 
+**Alpine Linux:**
 ```bash
-# Debian
-curl -fsSL https://get.docker.com | sh
+# Enable community repository
+echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories
+
+# Update package index and install packages
+apk update
+apk add git bash curl docker docker-cli-compose python3 py3-pip py3-yaml ansible
+
+# Start and enable Docker service
+rc-update add docker boot
+service docker start
+```
+
+**Debian / Ubuntu:**
+```bash
+sudo apt update
+sudo apt install -y git bash curl docker.io docker-compose-v2 ansible
 sudo usermod -aG docker $USER
-# log out and back in
 ```
 
 ---
 
-## Step 5 — Mount the Repo into the VM
+## Step 5 — Mount or Clone the Repo in the VM
 
-**Option A — VS Code Remote-SSH (recommended)**
+**Option A — Direct Clone in VM (recommended)**
 
-Install the **Remote - SSH** extension in VS Code on Windows. Connect to the VM's IP.
-Open the folder where you cloned `thinkcenter-cluster`. Edit files normally in VS Code on
-Windows; they are saved directly on the VM's filesystem.
-
-**Option B — Hyper-V File Share (SMB)**
-
-In the VM:
 ```bash
-sudo apt install samba -y
-# Configure a share pointing at your repo clone directory
+git clone https://github.com/AmazingHorse/thinkcenter-cluster.git
+cd thinkcenter-cluster
 ```
 
-Then on Windows: `\\<vm-ip>\share` in File Explorer.
+**Option B — VS Code Remote-SSH**
+
+Install the **Remote - SSH** extension in VS Code on Windows. Connect to the VM's IP and open the folder.
 
 ---
 
-## Step 6 — Clone the Repo and Configure
+## Step 6 — Configure Manifest, Fetch Assets & Render Boot Configs
 
 In the boot server VM:
 
 ```bash
-git clone https://github.com/YOUR_ORG/thinkcenter-cluster.git
 cd thinkcenter-cluster
 
-# Configure your node MACs and IPs
-nano boot/dnsmasq/dnsmasq.conf     # set interface=, MAC leases, boot_server_ip
-nano boot/matchbox/groups/pve01.json  # set real MAC
-# repeat for pve02, pve03
+# 1. Edit node MACs, IPs, & ISO SHA256 in the single source of truth
+nano cluster-manifest.yml
 
-# Fetch PVE ISO and iPXE binaries
+# 2. Fetch PVE ISO and iPXE binaries (reads pve_version & sha256 from manifest)
 bash boot/scripts/fetch-assets.sh
+
+# 3. Render boot configs & matchbox groups
+ansible-playbook ansible/playbooks/00-generate-boot-config.yml
 ```
+
+> **Why `00-generate-boot-config.yml` instead of `site.yml` here?**
+> `site.yml` includes all playbooks (00 through 07). If run before `pve01` is PXE-booted, step 00 renders the boot configs successfully, but step 01 (`01-bootstrap.yml`) will fail trying to SSH into `pve01` before it exists. Running `00-generate-boot-config.yml` directly renders the boot files cleanly. Once `pve01` is installed and online, you can run `ansible-playbook ansible/playbooks/site.yml` to execute the full site deployment.
 
 ---
 
@@ -111,7 +123,7 @@ bash boot/scripts/fetch-assets.sh
 ```bash
 cd thinkcenter-cluster
 docker compose -f boot/docker-compose.yml up -d
-docker compose -f boot/docker-compose.yml logs -f   # watch for DHCP/boot requests
+docker compose -f boot/docker-compose.yml logs -f dnsmasq   # watch for DHCP/boot requests
 ```
 
 ---
@@ -146,11 +158,75 @@ which works natively on Linux without any VM or bridge setup.
 
 ---
 
-## Troubleshooting
+## Troubleshooting Hyper-V Network & "Bad Address" Issues
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| ThinkCentre gets no DHCP offer | dnsmasq container not on L2 segment | Verify VM is using `ClusterBridge` switch, not `Default Switch` |
-| dnsmasq won't start | Port 67 (DHCP) already in use | Disable Windows DHCP client on the shared NIC: `netsh int ip set address "ClusterBridge" static ...` |
-| matchbox returns 404 | ISO not in `assets/` | Re-run `fetch-assets.sh` |
-| SSH to nodes fails after install | Proxmox installed on wrong NIC | Verify `eth-mgmt` is the NIC on the cluster subnet |
+### 1. "ping: bad address 'google.com'" (Alpine DNS Fix)
+By default, Alpine's `/etc/resolv.conf` may not receive DNS servers from Hyper-V DHCP.
+```bash
+# Add public / local DNS servers manually
+echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf
+echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf
+```
+To make DNS persistent across Alpine reboots, configure `/etc/network/interfaces`:
+```ini
+auto eth0
+iface eth0 inet dhcp
+    dns-nameservers 1.1.1.1 8.8.8.8
+```
+
+### 2. VM Stuck on "Broadcasting Discover" (DHCP Blocked)
+If Alpine is stuck on `udhcpc: broadcasting discover` during setup:
+
+#### A. Wi-Fi Adapter Issue (Critical)
+**Hyper-V External Switches do NOT work with Wi-Fi cards out-of-the-box** because IEEE 802.11 Wi-Fi frames reject multiple MAC addresses on a single wireless association.
+- **If connected over Wi-Fi:** You must use **Hyper-V Internal Switch + Internet Connection Sharing (ICS)** or an Ethernet cable.
+
+#### B. Allow Hyper-V Traffic in Windows Firewall
+Run in **PowerShell as Administrator**:
+```powershell
+# Allow DHCP & Hyper-V switch traffic through Windows Firewall
+New-NetFirewallRule -DisplayName "Hyper-V DHCP Allow" -Direction Inbound -Protocol UDP -LocalPort 67,68 -Action Allow
+New-NetFirewallRule -DisplayName "Hyper-V Outbound Allow" -Direction Outbound -Action Allow
+```
+
+#### C. Enable Promiscuous Mode / MAC Spoofing
+1. **Hyper-V Manager** → Right-click VM → **Settings**.
+2. **Network Adapter** → **Advanced Features**.
+3. Check ✅ **Enable MAC address spoofing**.
+4. Click **Apply**.
+
+### 3. Verify Switch Binding in PowerShell (Windows)
+Make sure your Hyper-V switch is bound to the active physical Ethernet adapter:
+```powershell
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status
+Get-VMSwitch | Select-Object Name, SwitchType, NetAdapterInterfaceDescription
+```
+
+### 4. "Bindings will be disabled" Warning / Cannot Check Extensible Switch Manually
+- **Do NOT manually check `Hyper-V Extensible Virtual Switch` or `Microsoft Network Adapter Multiplexor Protocol` in `ncpa.cpl` (Network Connections GUI).** Windows manages `vms_pp` dynamically. Manually checking them causes Windows to show a prompt saying they will be disabled upon clicking OK.
+- **Create the Virtual Switch via Hyper-V Manager or Elevated PowerShell:**
+  ```powershell
+  # Run PowerShell as Administrator
+  New-VMSwitch -Name "ClusterBridge" -NetAdapterName "Ethernet 2" -AllowManagementOS $true
+  ```
+- **Error `0x80071A90` (Transactional Conflict / Hanging at 80%):**
+  If `New-VMSwitch` hangs around 80% with error `0x80071A90` (*“The function attempted to use a name that is reserved for use by another transaction”*):
+  1. Disable conflicting NDIS filter drivers in Elevated PowerShell:
+     ```powershell
+     Disable-NetAdapterBinding -Name "Ethernet 2" -ComponentID "ms_l2bridge"
+     Disable-NetAdapterBinding -Name "Ethernet 2" -ComponentID "oracle_VBoxNetLwf"
+     ```
+  2. **Reboot Windows:** Once an NDIS transaction conflict (`0x80071A90`) occurs, Windows Kernel Transaction Manager (KTM) locks the adapter port in kernel memory. A system reboot is **required** to purge the locked transaction.
+  3. After reboot, run `New-VMSwitch` again:
+     ```powershell
+     New-VMSwitch -Name "ClusterBridge" -NetAdapterName "Ethernet 2" -AllowManagementOS $true
+     ```
+
+- **Alternative Workaround (Internal Switch + Windows Network Bridge):**
+  If External Switch creation continues to fail on your physical NIC, use an Internal Switch bridged via Windows:
+  1. Create an Internal Switch: `New-VMSwitch -Name "ClusterBridge" -SwitchType Internal`
+  2. Open `ncpa.cpl`
+  3. Select both `Ethernet 2` and `vEthernet (ClusterBridge)` -> Right-click -> **Bridge Connections**
+
+
+

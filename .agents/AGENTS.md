@@ -73,3 +73,5 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 ## Scratchpad
 
 <!-- Agents: use this section for temporary working notes during tasks -->
+
+- Future pipeline enhancement: Add a command runner (e.g., `justfile` / `just`) to bundle boot stack setup steps into a single target (`fetch-assets` → `00-generate-boot-config` → `docker compose up`).
