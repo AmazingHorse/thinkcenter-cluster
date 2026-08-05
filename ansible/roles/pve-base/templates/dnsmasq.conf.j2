@@ -2,6 +2,9 @@
 
 interface=eth0
 dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.100') }},{{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.199') }},12h
+dhcp-option=option:router,{{ cluster.management_gateway }}
+dhcp-option=option:netmask,255.255.255.0
+dhcp-option=option:dns-server,{{ cluster.management_gateway }}
 
 {% for node in nodes %}
 dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
