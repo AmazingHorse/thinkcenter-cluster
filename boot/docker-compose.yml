@@ -25,8 +25,7 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
-    environment:
-      - HTTP_PORT=8081
+    command: --port 8081 --config /etc/dnsmasq.conf
     volumes:
       - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:ro
       - ./matchbox/assets:/var/lib/matchbox/assets:ro
