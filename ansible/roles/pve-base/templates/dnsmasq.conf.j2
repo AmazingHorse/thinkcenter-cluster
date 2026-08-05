@@ -16,9 +16,9 @@ dhcp-match=set:efi-x64,option:client-arch,9
 dhcp-match=set:efi-bc,option:client-arch,6
 
 # Boot binaries
-dhcp-boot=tag:efi-x86_64,tag:!ipxe,ipxe.efi
-dhcp-boot=tag:efi-x64,tag:!ipxe,ipxe.efi
-dhcp-boot=tag:efi-bc,tag:!ipxe,ipxe.efi
+dhcp-boot=tag:efi-x86_64,tag:!ipxe,snponly.efi
+dhcp-boot=tag:efi-x64,tag:!ipxe,snponly.efi
+dhcp-boot=tag:efi-bc,tag:!ipxe,snponly.efi
 dhcp-boot=tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,tag:!ipxe,undionly.kpxe
 
 dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe

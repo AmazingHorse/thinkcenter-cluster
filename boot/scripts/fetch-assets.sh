@@ -23,6 +23,7 @@ PVE_URL="https://enterprise.proxmox.com/iso/${PVE_ISO}"
 
 IPXE_URL="https://boot.ipxe.org/undionly.kpxe"
 IPXE_EFI_URL="https://boot.ipxe.org/x86_64-efi/ipxe.efi"
+IPXE_SNP_URL="https://boot.ipxe.org/x86_64-efi/snponly.efi"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 fetch_if_missing() {
@@ -55,6 +56,7 @@ verify_sha256 "${ASSETS_DIR}/${PVE_ISO}" "${PVE_SHA256}"
 echo "==> Fetching iPXE binaries"
 fetch_if_missing "${IPXE_URL}" "${ASSETS_DIR}/undionly.kpxe"
 fetch_if_missing "${IPXE_EFI_URL}" "${ASSETS_DIR}/ipxe.efi"
+fetch_if_missing "${IPXE_SNP_URL}" "${ASSETS_DIR}/snponly.efi"
 
 echo ""
 echo "Assets ready in ${ASSETS_DIR}:"
