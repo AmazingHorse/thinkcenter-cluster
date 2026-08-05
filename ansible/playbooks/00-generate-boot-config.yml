@@ -58,7 +58,7 @@
     - name: Render Proxmox Answer TOML files
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"
-        dest: "{{ playbook_dir }}/../../boot/matchbox/assets/answers/{{ item.name }}.toml"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/assets/answers/{{ item.mac | lower | replace(':', '-') }}.toml"
         mode: "0644"
       loop: "{{ nodes }}"
 
