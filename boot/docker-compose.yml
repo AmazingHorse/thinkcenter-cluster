@@ -12,7 +12,7 @@ services:
     network_mode: host
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./matchbox/assets:/var/lib/matchbox/assets:ro
+      - ./assets:/var/lib/boot/assets:ro
     # nginx serves:
     #   GET /autoexec.ipxe          → iPXE script
     #   GET/POST /assets/answers/*  → per-node Proxmox answer TOML (HTTP POST mapped to 200 OK)
@@ -27,7 +27,7 @@ services:
     command: ["-C", "/etc/dnsmasq/dnsmasq.conf"]
     volumes:
       - ./dnsmasq:/etc/dnsmasq:ro
-      - ./matchbox/assets:/var/lib/matchbox/assets:ro
+      - ./assets:/var/lib/boot/assets:ro
     # dnsmasq provides:
     #   DHCP with static leases (MAC → IP)
     #   TFTP root for iPXE binary

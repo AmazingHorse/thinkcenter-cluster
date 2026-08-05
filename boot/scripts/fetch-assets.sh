@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST_FILE="${SCRIPT_DIR}/../../cluster-manifest.yml"
-ASSETS_DIR="${SCRIPT_DIR}/../matchbox/assets"
+ASSETS_DIR="${SCRIPT_DIR}/../assets"
 mkdir -p "${ASSETS_DIR}"
 
 # ── Parse manifest ────────────────────────────────────────────────────────────
