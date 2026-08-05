@@ -64,18 +64,19 @@ Edit **`cluster-manifest.yml`** in the root of the repository:
 
 ---
 
-## 4 — Start Boot Server
+## 4 — Start Boot Server (`just standup`)
 
 In your boot server host / Hyper-V VM:
 
 ```bash
-# Download PVE ISO and iPXE binaries (verifies sha256 from cluster-manifest.yml)
-bash boot/scripts/fetch-assets.sh
+# Idempotently fetch assets, render boot configs from manifest, and start stack
+just standup
 
-# Start matchbox + dnsmasq
-docker compose -f boot/docker-compose.yml up -d
-docker compose -f boot/docker-compose.yml logs -f
+# Check live logs
+just logs
 ```
+
+*(Alternatively, run manually: `bash boot/scripts/fetch-assets.sh` → `ansible-playbook ansible/playbooks/00-generate-boot-config.yml` → `docker compose -f boot/docker-compose.yml up -d`)*
 
 ---
 

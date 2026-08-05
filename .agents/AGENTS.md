@@ -68,22 +68,19 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 - PVE SDN EVPN requires `frr` in BGP/EVPN mode (frr is installed; OSPF for cluster routing is separate config)
 - Ceph cluster_network is `10.10.0.0/8` — covers all three /30 subnets; OSPF makes them mutually routable
 - VM bridge (`vmbr0`) shares eth-mgmt 1G with management and Corosync ring 0 during POC
-- M.2 WiFi 2.5G NIC (eth-cluster-b) uses 6-inch ribbon cable: route away from CPU VRMs; use `ethtool` if link renegotiation occurs
 
 ## Scratchpad
 
 <!-- Agents: use this section for temporary working notes during tasks -->
 
-- Future pipeline enhancement: Add a command runner (e.g., `justfile` / `just`) to bundle boot stack setup steps into a single target (`fetch-assets` → `00-generate-boot-config` → `docker compose up`).
+- **Command Runner**: Root [`justfile`](../justfile) added. Run `just standup` to idempotently fetch assets, render manifest boot configs, and launch containers.
+- **Hyper-V Static MAC**: Hyper-V VM adapter requires **Static MAC** in Advanced Features to prevent dynamic MAC reassignment & router DHCP IP drift on VM restart.
 - **PXE Netboot Status & Resolved Issues**:
   - **iPXE Magic Header**: Must be `#!ipxe` (no leading slash); `#!/ipxe` causes silent parser rejection.
   - **HTTP Streaming**: `autoexec.ipxe` pulls `linux26` and `initrd.img` over HTTP for ~15s transfers.
   - **ISO Embedding in Ramdisk**: `fetch-assets.sh` hardlinks (`ln -f`) `proxmox-ve_9.2-1.iso` to `proxmox.iso` and appends it via `cpio -H newc -o | zstd -1 -T0 >> initrd.img`. The payload MUST be `zstd` compressed to match `initrd.img`'s compression, and named `proxmox.iso` for `/init` detection.
   - **Kernel Cmdline**: Requires `ramdisk_size=2097152` (2GB) to hold the 1.6GB image in memory.
-- **Resolved Answer File Fetching Issue**:
-  - **Root Cause 1 (HTTP 405)**: `proxmox-fetch-answer` issues an HTTP POST with DMI JSON payload to `proxmox-auto-install-answer-file-url`. Static asset servers (Matchbox) return `405 Method Not Allowed` on POST.
-  - **Root Cause 2 (HTTP 404)**: `00-generate-boot-config.yml` rendered answers as `<mac-hyphenated>.toml` (`80-86-f2-18-55-b6.toml`), but Matchbox profile requested `<hostname>.toml` (`pve01.toml`).
-  - **Fix Strategy**:
-    1. Render answer TOML files under both MAC (`<mac-hyphenated>.toml`) and hostname (`<hostname>.toml`) in `00-generate-boot-config.yml`.
-    2. Add Nginx (or Caddy / HTTP rewrite rule `error_page 405 =200 $uri;`) to intercept POST requests to `/assets/answers/` and return HTTP 200 OK with the static TOML payload.
-    3. Strip empty `proxmox-auto-install-answer-file-url-cert-fingerprint=` argument when using standard `http://`.
+- **Resolved Answer File Fetching Issue (Matchbox → Nginx Refactor)**:
+  - Matchbox replaced with `nginx:alpine` container. Nginx handles HTTP POST requests to `/assets/answers/*.toml` via `error_page 405 =200 $uri;`, serving answer files cleanly as 200 OK.
+  - Ansible `00-generate-boot-config.yml` renders answers by both MAC (`80-86-f2-18-55-b6.toml`) and hostname (`pve01.toml`).
+

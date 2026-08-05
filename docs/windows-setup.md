@@ -189,11 +189,15 @@ New-NetFirewallRule -DisplayName "Hyper-V DHCP Allow" -Direction Inbound -Protoc
 New-NetFirewallRule -DisplayName "Hyper-V Outbound Allow" -Direction Outbound -Action Allow
 ```
 
-#### C. Enable Promiscuous Mode / MAC Spoofing
-1. **Hyper-V Manager** → Right-click VM → **Settings**.
-2. **Network Adapter** → **Advanced Features**.
-3. Check ✅ **Enable MAC address spoofing**.
-4. Click **Apply**.
+#### C. Enable MAC Spoofing & Lock a Static MAC Address (Prevent DHCP IP Drift)
+When Hyper-V MAC spoofing is enabled without a fixed MAC address, Hyper-V may assign a new dynamic MAC address to the VM upon restart, causing your router's DHCP server to assign a new IP address to the `boot-server` VM and invalidating `boot_server_ip` in `cluster-manifest.yml`.
+
+1. **Hyper-V Manager** → Right-click `boot-server` VM → **Settings**.
+2. Expand **Network Adapter** → click **Advanced Features**.
+3. Check ✅ **Enable MAC address spoofing** *(allows dnsmasq to broadcast DHCP)*.
+4. Under **MAC address**, select **Static** (instead of Dynamic) and enter a specific MAC (e.g. `00-15-5D-01-02-03`).
+5. Click **Apply** → **OK**.
+6. *(Recommended)* On your home LAN router, add a **DHCP Reservation** binding that static MAC address to your desired `boot_server_ip` (e.g., `192.168.50.191`).
 
 ### 3. Verify Switch Binding in PowerShell (Windows)
 Make sure your Hyper-V switch is bound to the active physical Ethernet adapter:
