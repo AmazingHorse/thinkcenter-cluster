@@ -20,12 +20,11 @@ services:
     #   GET /assets/<file>        → PVE ISO, ipxe binaries
 
   dnsmasq:
-    image: jpillora/dnsmasq:latest
+    image: stefanmuehlbauer/dnsmasq:latest
     restart: unless-stopped
     network_mode: host
     cap_add:
       - NET_ADMIN
-    command: --port 8081 --config /etc/dnsmasq.conf
     volumes:
       - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:ro
       - ./matchbox/assets:/var/lib/matchbox/assets:ro
