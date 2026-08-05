@@ -31,9 +31,9 @@ dhcp-option=tag:!ipxe,tag:efi-x64,67,"snponly.efi"
 dhcp-option=tag:!ipxe,tag:efi-bc,67,"snponly.efi"
 dhcp-option=tag:!ipxe,tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,67,"undionly.kpxe"
 
-# Boot script for iPXE clients
-dhcp-option=tag:ipxe,67,"autoexec.ipxe"
-dhcp-boot=tag:ipxe,autoexec.ipxe
+# Boot script for iPXE clients (HTTP chainload from nginx)
+dhcp-option=tag:ipxe,67,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
+dhcp-boot=tag:ipxe,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
 
 domain={{ cluster.domain }}
 local=/{{ cluster.domain }}/
