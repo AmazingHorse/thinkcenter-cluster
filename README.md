@@ -21,7 +21,7 @@ PXE-boot a blank node → unattended Proxmox 9.2 install → Ansible cluster for
 | Layer | Technology |
 |---|---|
 | Single Source of Truth | `cluster-manifest.yml` at repo root |
-| Network boot | matchbox + dnsmasq (Docker, `network_mode: host`) |
+| Network boot | nginx + dnsmasq (Docker, `network_mode: host`) |
 | OS install | Proxmox VE 9.2 unattended ISO + HTTP answer file |
 | Configuration | Ansible (agentless, SSH) |
 | Cluster fabric | Full-mesh switchless direct cables + OSPF routing via `frr` |
@@ -42,7 +42,7 @@ See **[`docs/runbook.md`](docs/runbook.md)** for detailed commands and **[`docs/
    - Fill in node built-in 1G **MAC addresses** and official Proxmox ISO **SHA256 hash**.
 
 ### Step 2 — Start Boot Stack (Boot Server)
-Run assets fetcher and start containerized boot server (dnsmasq + matchbox):
+Run assets fetcher and start containerized boot server (dnsmasq + nginx):
 ```bash
 bash boot/scripts/fetch-assets.sh
 docker compose -f boot/docker-compose.yml up -d

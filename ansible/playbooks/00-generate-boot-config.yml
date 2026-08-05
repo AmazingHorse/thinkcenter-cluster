@@ -42,24 +42,17 @@
         mode: "0644"
         newline_sequence: '\n'
 
-    - name: Render Matchbox Group JSON files
-      ansible.builtin.template:
-        src: "{{ playbook_dir }}/../roles/pve-base/templates/matchbox-group.json.j2"
-        dest: "{{ playbook_dir }}/../../boot/matchbox/groups/{{ item.name }}.json"
-        mode: "0644"
-      loop: "{{ nodes }}"
-
-    - name: Render Matchbox Profile JSON per node
-      ansible.builtin.template:
-        src: "{{ playbook_dir }}/../roles/pve-base/templates/pxe-proxmox.json.j2"
-        dest: "{{ playbook_dir }}/../../boot/matchbox/profiles/pxe-proxmox-{{ item.name }}.json"
-        mode: "0644"
-      loop: "{{ nodes }}"
-
-    - name: Render Proxmox Answer TOML files
+    - name: Render Proxmox Answer TOML files (by MAC)
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"
         dest: "{{ playbook_dir }}/../../boot/matchbox/assets/answers/{{ item.mac | lower | replace(':', '-') }}.toml"
+        mode: "0644"
+      loop: "{{ nodes }}"
+
+    - name: Render Proxmox Answer TOML files (by hostname)
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/assets/answers/{{ item.name }}.toml"
         mode: "0644"
       loop: "{{ nodes }}"
 

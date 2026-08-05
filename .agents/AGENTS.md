@@ -80,9 +80,10 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
   - **HTTP Streaming**: `autoexec.ipxe` pulls `linux26` and `initrd.img` over HTTP for ~15s transfers.
   - **ISO Embedding in Ramdisk**: `fetch-assets.sh` hardlinks (`ln -f`) `proxmox-ve_9.2-1.iso` to `proxmox.iso` and appends it via `cpio -H newc -o | zstd -1 -T0 >> initrd.img`. The payload MUST be `zstd` compressed to match `initrd.img`'s compression, and named `proxmox.iso` for `/init` detection.
   - **Kernel Cmdline**: Requires `ramdisk_size=2097152` (2GB) to hold the 1.6GB image in memory.
-- **Open Issue & Next Steps (Answer File Fetching)**:
-  - **Problem**: Node netboots into installer successfully, but is not applying/fetching the answer TOML configuration (`http://<boot_server>:8080/assets/answers/<mac>.toml`).
-  - **Next Steps**:
-    1. Investigate Proxmox VE 9.2 automated installer HTTP fetch behavior (Proxmox VE 9.2 inherits the automated installer introduced in 8.2; the installer sends HTTP POST with system DMI JSON payload to the answer URL; static file servers returning 405 on POST might need a fallback handler or HTTP GET configuration).
-    2. Test dropping to installer debug TTY (`tty3`) to inspect `proxmox-fetch-answer` logs.
-    3. Verify kernel cmdline parameter syntax for static HTTP GET fetching (`proxmox-auto-install-answer-file-url`).
+- **Resolved Answer File Fetching Issue**:
+  - **Root Cause 1 (HTTP 405)**: `proxmox-fetch-answer` issues an HTTP POST with DMI JSON payload to `proxmox-auto-install-answer-file-url`. Static asset servers (Matchbox) return `405 Method Not Allowed` on POST.
+  - **Root Cause 2 (HTTP 404)**: `00-generate-boot-config.yml` rendered answers as `<mac-hyphenated>.toml` (`80-86-f2-18-55-b6.toml`), but Matchbox profile requested `<hostname>.toml` (`pve01.toml`).
+  - **Fix Strategy**:
+    1. Render answer TOML files under both MAC (`<mac-hyphenated>.toml`) and hostname (`<hostname>.toml`) in `00-generate-boot-config.yml`.
+    2. Add Nginx (or Caddy / HTTP rewrite rule `error_page 405 =200 $uri;`) to intercept POST requests to `/assets/answers/` and return HTTP 200 OK with the static TOML payload.
+    3. Strip empty `proxmox-auto-install-answer-file-url-cert-fingerprint=` argument when using standard `http://`.

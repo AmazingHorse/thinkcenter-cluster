@@ -1,4 +1,4 @@
-# Boot server stack — matchbox + dnsmasq
+# Boot server stack — nginx + dnsmasq
 #
 # Run on a Linux host (or Hyper-V VM with External Switch on Windows).
 # Requires network_mode: host so dnsmasq can broadcast DHCP on the physical LAN.
@@ -6,18 +6,17 @@
 
 services:
 
-  matchbox:
-    image: quay.io/poseidon/matchbox:latest
+  nginx:
+    image: nginx:alpine
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./matchbox:/var/lib/matchbox:ro
-    command:
-      - -address=0.0.0.0:8080
-      - -log-level=info
-    # matchbox serves:
-    #   GET /metadata?mac=<MAC>   → per-node answer file URL
-    #   GET /assets/<file>        → PVE ISO, ipxe binaries
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./matchbox/assets:/var/lib/matchbox/assets:ro
+    # nginx serves:
+    #   GET /autoexec.ipxe          → iPXE script
+    #   GET/POST /assets/answers/*  → per-node Proxmox answer TOML (HTTP POST mapped to 200 OK)
+    #   GET /assets/<file>          → PVE kernel (linux26), initrd.img, iPXE binaries
 
   dnsmasq:
     image: strm/dnsmasq:latest
