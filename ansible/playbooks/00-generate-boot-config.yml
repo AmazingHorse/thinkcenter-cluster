@@ -40,6 +40,7 @@
         src: "{{ playbook_dir }}/../roles/pve-base/templates/autoexec.ipxe.j2"
         dest: "{{ playbook_dir }}/../../boot/matchbox/assets/autoexec.ipxe"
         mode: "0644"
+        newline_sequence: '\n'
 
     - name: Render Matchbox Group JSON files
       ansible.builtin.template:
