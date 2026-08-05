@@ -35,6 +35,12 @@
         dest: "{{ playbook_dir }}/../../boot/dnsmasq/dnsmasq.conf"
         mode: "0644"
 
+    - name: Render autoexec.ipxe
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/autoexec.ipxe.j2"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/assets/autoexec.ipxe"
+        mode: "0644"
+
     - name: Render Matchbox Group JSON files
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/pve-base/templates/matchbox-group.json.j2"
