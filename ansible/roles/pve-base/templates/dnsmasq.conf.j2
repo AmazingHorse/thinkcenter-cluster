@@ -2,7 +2,7 @@
 
 interface=eth0
 # Enable ProxyDHCP mode to co-exist with home router DHCP
-dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') }},proxy
+dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('/.*$', '') }},proxy,255.255.255.0
 dhcp-option=option:router,{{ cluster.management_gateway }}
 dhcp-option=option:netmask,255.255.255.0
 dhcp-option=option:dns-server,{{ cluster.management_gateway }}
