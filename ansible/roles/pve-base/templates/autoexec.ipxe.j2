@@ -1,20 +1,9 @@
 #!ipxe
-echo "DEBUG: iPXE script successfully loaded!"
-sleep 2
-
-echo "DEBUG: Attempting to fetch Proxmox kernel over TFTP..."
-kernel tftp://{{ cluster.boot_server_ip }}/linux26 initrd=initrd.img vga=788 proxmox-auto-install-answer-file-url=http://{{ cluster.boot_server_ip }}:8080/assets/answers/${mac:hexhyp}.toml proxmox-auto-install-answer-file-url-cert-fingerprint= quiet || goto failed
-echo "DEBUG: Kernel fetch SUCCESS"
-sleep 2
-
-echo "DEBUG: Attempting to fetch initrd over TFTP..."
+echo Booting Proxmox VE over TFTP...
+kernel tftp://{{ cluster.boot_server_ip }}/linux26 initrd=initrd.img vga=788 proxmox-start-auto-installer proxmox-auto-install-answer-file-url=http://{{ cluster.boot_server_ip }}:8080/assets/answers/${mac:hexhyp}.toml proxmox-auto-install-answer-file-url-cert-fingerprint= quiet || goto failed
 initrd tftp://{{ cluster.boot_server_ip }}/initrd.img || goto failed
-echo "DEBUG: Initrd fetch SUCCESS"
-sleep 2
-
-echo "DEBUG: Booting..."
 boot || goto failed
 
 :failed
-echo "DEBUG: A command failed. Pausing 30 seconds before exit..."
+echo iPXE boot failed. Pausing 30 seconds...
 sleep 30
