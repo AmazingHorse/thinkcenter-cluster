@@ -61,3 +61,20 @@
         dest: "{{ playbook_dir }}/../inventory/host_vars/{{ item.name }}.yml"
         mode: "0644"
       loop: "{{ nodes }}"
+
+    - name: Render proxmox-auto-installer-mode config
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-auto-installer-mode.j2"
+        dest: "{{ playbook_dir }}/../../boot/assets/proxmox-auto-installer-mode"
+        mode: "0644"
+
+    - name: Check if initrd.img exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../../boot/assets/initrd.img"
+      register: initrd_file
+
+    - name: Inject proxmox-auto-installer-mode into initrd.img ramdisk
+      ansible.builtin.shell: |
+        cd "{{ playbook_dir }}/../../boot/assets" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o | zstd -1 -T0 >> initrd.img && rm -f proxmox-auto-installer-mode
+      when: initrd_file.stat.exists
+      ignore_errors: true

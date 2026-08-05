@@ -14,9 +14,14 @@ default:
 fetch:
     bash boot/scripts/fetch-assets.sh
 
-# Wipe downloaded ISOs, extracted kernel assets, and generated answers
+# Wipe extracted kernel assets & generated configs (keeps downloaded ISO intact)
 clean:
-    rm -f boot/assets/*.iso boot/assets/*.img boot/assets/linux26 boot/assets/answers/*.toml
+    rm -f boot/assets/linux26 boot/assets/initrd.img boot/assets/autoexec.ipxe
+    rm -rf boot/assets/answers/
+
+# Full wipe including downloaded ISO files
+clean-all: clean
+    rm -f boot/assets/*.iso
 
 # Render boot server configs & host_vars from cluster-manifest.yml
 render:

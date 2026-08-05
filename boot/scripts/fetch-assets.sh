@@ -10,12 +10,24 @@ ASSETS_DIR="${SCRIPT_DIR}/../assets"
 mkdir -p "${ASSETS_DIR}"
 
 # ── Parse manifest ────────────────────────────────────────────────────────────
-if [[ -f "${MANIFEST_FILE}" ]]; then
-  PVE_VERSION=$(grep 'pve_version:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
-  PVE_SHA256=$(grep 'pve_iso_sha256:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
-else
-  PVE_VERSION="9.2"
-  PVE_SHA256="REPLACE_WITH_OFFICIAL_SHA256"
+if [[ ! -f "${MANIFEST_FILE}" ]]; then
+  echo "ERROR: Manifest file not found at ${MANIFEST_FILE}" >&2
+  echo "Please create cluster-manifest.yml at repo root before running fetch-assets.sh." >&2
+  exit 1
+fi
+
+PVE_VERSION=$(grep 'pve_version:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+PVE_SHA256=$(grep 'pve_iso_sha256:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+BOOT_SERVER_IP=$(grep 'boot_server_ip:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+
+if [[ -z "${PVE_VERSION}" ]]; then
+  echo "ERROR: pve_version not found in ${MANIFEST_FILE}" >&2
+  exit 1
+fi
+
+if [[ -z "${BOOT_SERVER_IP}" ]]; then
+  echo "ERROR: boot_server_ip not found in ${MANIFEST_FILE}" >&2
+  exit 1
 fi
 
 PVE_ISO="proxmox-ve_${PVE_VERSION}-1.iso"
@@ -87,10 +99,16 @@ if [[ ! -f "${ASSETS_DIR}/linux26" || ! -f "${ASSETS_DIR}/initrd.img" ]]; then
     7z x -y "${ASSETS_DIR}/${PVE_ISO}" boot/linux26 boot/initrd.img -o"${ASSETS_DIR}" >/dev/null
     mv "${ASSETS_DIR}/boot/linux26" "${ASSETS_DIR}/linux26"
     mv "${ASSETS_DIR}/boot/initrd.img" "${ASSETS_DIR}/initrd.img"
-    echo "  [pxe] embedding ISO payload as proxmox.iso into initrd.img (fast zstd)..."
+    echo "  [pxe] embedding ISO payload & proxmox-auto-installer-mode into initrd.img (fast zstd)..."
+    cat <<EOF > "${ASSETS_DIR}/proxmox-auto-installer-mode"
+mode = "http"
+
+[http]
+url = "http://${BOOT_SERVER_IP}:8080/assets/answers/"
+EOF
     if command -v cpio >/dev/null 2>&1 && command -v zstd >/dev/null 2>&1; then
-      (cd "${ASSETS_DIR}" && ln -f "${PVE_ISO}" proxmox.iso && echo "proxmox.iso" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && rm -f proxmox.iso)
-      echo "  [ok] proxmox.iso zstd-compressed and appended to initrd.img (size should now be ~1.6GB)"
+      (cd "${ASSETS_DIR}" && ln -f "${PVE_ISO}" proxmox.iso && printf "proxmox.iso\nproxmox-auto-installer-mode\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
+      echo "  [ok] proxmox.iso & proxmox-auto-installer-mode zstd-compressed and appended to initrd.img"
     else
       echo "  [warn] cpio or zstd not found. Install with: apk add cpio zstd"
     fi
