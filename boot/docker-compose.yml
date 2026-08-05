@@ -20,7 +20,7 @@ services:
     #   GET /assets/<file>        → PVE ISO, ipxe binaries
 
   dnsmasq:
-    image: stefanmuehlbauer/dnsmasq:latest
+    image: strm/dnsmasq:latest
     restart: unless-stopped
     network_mode: host
     cap_add:
