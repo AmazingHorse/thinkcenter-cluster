@@ -14,11 +14,11 @@ dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
 enable-tftp
 tftp-root=/var/lib/matchbox/assets
 
-# ProxyDHCP PXE Services
+# ProxyDHCP PXE Services (only for initial PXE, not iPXE)
 pxe-prompt="Booting Proxmox VE Cluster...", 1
-pxe-service=x86-64_EFI, "Proxmox VE Installer", snponly.efi
-pxe-service=6, "Proxmox VE Installer BC", snponly.efi
-pxe-service=X86PC, "Proxmox VE Installer Legacy", undionly.kpxe
+pxe-service=tag:!ipxe,x86-64_EFI, "Proxmox VE Installer", snponly.efi
+pxe-service=tag:!ipxe,6, "Proxmox VE Installer BC", snponly.efi
+pxe-service=tag:!ipxe,X86PC, "Proxmox VE Installer Legacy", undionly.kpxe
 
 # iPXE detection (Option 175 + User-Class)
 dhcp-match=set:ipxe,175
