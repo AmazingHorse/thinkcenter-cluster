@@ -1,7 +1,7 @@
 {
   "id": "{{ item.name }}",
   "name": "{{ item.name }}",
-  "profile": "pxe-proxmox",
+  "profile": "pxe-proxmox-{{ item.name }}",
   "selector": {
     "mac": "{{ item.mac | lower }}"
   },
