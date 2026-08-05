@@ -60,13 +60,16 @@ test target="localhost":
     @echo "==> 1. Testing GET /autoexec.ipxe..."
     curl -sf http://{{ target }}:8080/autoexec.ipxe | head -n 4
     @echo ""
-    @echo "==> 2. Testing POST /assets/answers/pve01.toml (Simulating proxmox-fetch-answer)..."
-    curl -sf -X POST http://{{ target }}:8080/assets/answers/pve01.toml | head -n 6
+    @echo "==> 2. Testing POST /assets/answers/pve01.toml (Simulating proxmox-fetch-answer by hostname)..."
+    curl -sf -X POST http://{{ target }}:8080/assets/answers/pve01.toml | head -n 4
     @echo ""
-    @echo "==> 3. Testing HEAD /assets/linux26..."
+    @echo "==> 3. Testing POST /assets/answers/80-86-f2-18-55-b6.toml (Simulating proxmox-fetch-answer by MAC)..."
+    curl -sf -X POST http://{{ target }}:8080/assets/answers/80-86-f2-18-55-b6.toml | head -n 4
+    @echo ""
+    @echo "==> 4. Testing HEAD /assets/linux26..."
     curl -sfI http://{{ target }}:8080/assets/linux26 | grep -i "HTTP\|Content-Length"
     @echo ""
-    @echo "==> 4. Testing HEAD /assets/initrd.img..."
+    @echo "==> 5. Testing HEAD /assets/initrd.img..."
     curl -sfI http://{{ target }}:8080/assets/initrd.img | grep -i "HTTP\|Content-Length"
     @echo ""
     @echo "[OK] All boot server endpoints operational!"
