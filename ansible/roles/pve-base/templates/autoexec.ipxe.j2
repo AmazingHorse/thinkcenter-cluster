@@ -1,3 +1,6 @@
 #!/ipxe
-dhcp
-chain http://{{ cluster.boot_server_ip }}:8080/boot.ipxe?mac=${net0/mac:hexhyp}
+dhcp || goto failed
+chain http://{{ cluster.boot_server_ip }}:8080/boot.ipxe?mac=${mac:hexhyp} || goto failed
+:failed
+echo iPXE boot failed. Pausing 30 seconds...
+sleep 30
