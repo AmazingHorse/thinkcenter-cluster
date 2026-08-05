@@ -6,7 +6,7 @@
   connection: local
   gather_facts: false
   vars_files:
-    - "../../cluster-manifest.yml"
+    - "{{ playbook_dir }}/../../cluster-manifest.yml"
   tasks:
     - name: Check if secrets file exists
       ansible.builtin.stat:
@@ -15,7 +15,7 @@
 
     - name: Load secrets if available
       ansible.builtin.include_vars:
-        file: "../secrets/vault.sops.yaml"
+        file: "{{ playbook_dir }}/../secrets/vault.sops.yaml"
       when: vault_file.stat.exists
 
     - name: Ensure config & inventory directories exist
@@ -24,34 +24,34 @@
         state: directory
         mode: "0755"
       loop:
-        - "../../boot/dnsmasq"
-        - "../../boot/matchbox/groups"
-        - "../../boot/matchbox/answers"
-        - "../inventory/host_vars"
+        - "{{ playbook_dir }}/../../boot/dnsmasq"
+        - "{{ playbook_dir }}/../../boot/matchbox/groups"
+        - "{{ playbook_dir }}/../../boot/matchbox/answers"
+        - "{{ playbook_dir }}/../inventory/host_vars"
 
     - name: Render dnsmasq.conf
       ansible.builtin.template:
-        src: "../roles/pve-base/templates/dnsmasq.conf.j2"
-        dest: "../../boot/dnsmasq/dnsmasq.conf"
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/dnsmasq.conf.j2"
+        dest: "{{ playbook_dir }}/../../boot/dnsmasq/dnsmasq.conf"
         mode: "0644"
 
     - name: Render Matchbox Group JSON files
       ansible.builtin.template:
-        src: "../roles/pve-base/templates/matchbox-group.json.j2"
-        dest: "../../boot/matchbox/groups/{{ item.name }}.json"
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/matchbox-group.json.j2"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/groups/{{ item.name }}.json"
         mode: "0644"
       loop: "{{ nodes }}"
 
     - name: Render Proxmox Answer TOML files
       ansible.builtin.template:
-        src: "../roles/pve-base/templates/proxmox-answer.toml.j2"
-        dest: "../../boot/matchbox/answers/{{ item.name }}.toml"
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/answers/{{ item.name }}.toml"
         mode: "0644"
       loop: "{{ nodes }}"
 
     - name: Render Ansible host_vars per node from manifest
       ansible.builtin.template:
-        src: "../roles/pve-base/templates/host_vars.yml.j2"
-        dest: "../inventory/host_vars/{{ item.name }}.yml"
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/host_vars.yml.j2"
+        dest: "{{ playbook_dir }}/../inventory/host_vars/{{ item.name }}.yml"
         mode: "0644"
       loop: "{{ nodes }}"
