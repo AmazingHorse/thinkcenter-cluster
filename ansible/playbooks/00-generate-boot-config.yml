@@ -26,7 +26,7 @@
       loop:
         - "{{ playbook_dir }}/../../boot/dnsmasq"
         - "{{ playbook_dir }}/../../boot/matchbox/groups"
-        - "{{ playbook_dir }}/../../boot/matchbox/answers"
+        - "{{ playbook_dir }}/../../boot/matchbox/assets/answers"
         - "{{ playbook_dir }}/../inventory/host_vars"
 
     - name: Render dnsmasq.conf
@@ -51,7 +51,7 @@
     - name: Render Proxmox Answer TOML files
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"
-        dest: "{{ playbook_dir }}/../../boot/matchbox/answers/{{ item.name }}.toml"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/assets/answers/{{ item.name }}.toml"
         mode: "0644"
       loop: "{{ nodes }}"
 

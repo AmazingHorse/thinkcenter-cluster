@@ -65,7 +65,7 @@ echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/reposito
 
 # Update package index and install packages
 apk update
-apk add git bash curl docker docker-cli-compose python3 py3-pip py3-yaml py3-netaddr ansible
+apk add git bash curl p7zip docker docker-cli-compose python3 py3-pip py3-yaml py3-netaddr ansible
 
 # Start and enable Docker service
 rc-update add docker boot

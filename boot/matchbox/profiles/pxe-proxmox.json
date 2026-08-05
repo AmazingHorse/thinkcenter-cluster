@@ -10,7 +10,7 @@
     "args": [
       "initrd=initrd.img",
       "vga=788",
-      "proxmox-auto-install-answer-file-url=http://{{ .request.query.MATCHBOX_SERVER }}/matchbox/answers/{{ .request.query.MATCHBOX_MAC }}.toml",
+      "proxmox-auto-install-answer-file-url={{ .url }}/assets/answers/{{ .group.id }}.toml",
       "proxmox-auto-install-answer-file-url-cert-fingerprint=",
       "quiet"
     ]
