@@ -1,0 +1,40 @@
+---
+# 00-generate-boot-config.yml — Render boot server configs natively via Ansible
+# Reads cluster-manifest.yml (or inventory host_vars) and renders dnsmasq + matchbox configs.
+
+- name: Render Boot Server Configurations
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - "../../cluster-manifest.yml"
+  tasks:
+    - name: Ensure boot server config directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "../../boot/dnsmasq"
+        - "../../boot/matchbox/groups"
+        - "../../boot/matchbox/answers"
+
+    - name: Render dnsmasq.conf
+      ansible.builtin.template:
+        src: "../roles/pve-base/templates/dnsmasq.conf.j2"
+        dest: "../../boot/dnsmasq/dnsmasq.conf"
+        mode: "0644"
+
+    - name: Render Matchbox Group JSON files
+      ansible.builtin.template:
+        src: "../roles/pve-base/templates/matchbox-group.json.j2"
+        dest: "../../boot/matchbox/groups/{{ item.name }}.json"
+        mode: "0644"
+      loop: "{{ nodes }}"
+
+    - name: Render Proxmox Answer TOML files
+      ansible.builtin.template:
+        src: "../roles/pve-base/templates/proxmox-answer.toml.j2"
+        dest: "../../boot/matchbox/answers/{{ item.name }}.toml"
+        mode: "0644"
+      loop: "{{ nodes }}"

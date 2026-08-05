@@ -1,0 +1,19 @@
+# Auto-generated from cluster-manifest.yml via Ansible 00-generate-boot-config.yml
+
+interface=eth0
+dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.100') }},{{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.199') }},12h
+
+{% for node in nodes %}
+dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
+{% endfor %}
+
+enable-tftp
+tftp-root=/var/lib/matchbox/assets
+dhcp-boot=tag:!ipxe,undionly.kpxe
+dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe
+dhcp-userclass=set:ipxe,iPXE
+domain={{ cluster.domain }}
+local=/{{ cluster.domain }}/
+expand-hosts
+log-queries
+log-dhcp

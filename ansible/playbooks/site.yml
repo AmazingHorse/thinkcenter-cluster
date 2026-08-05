@@ -3,6 +3,9 @@
 # Imports all phases in dependency order.
 # Run individual playbooks for targeted changes (e.g. only ceph config).
 
+- name: Render boot server configurations from manifest
+  import_playbook: 00-generate-boot-config.yml
+
 - name: Bootstrap nodes post-install
   import_playbook: 01-bootstrap.yml
 

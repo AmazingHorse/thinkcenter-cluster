@@ -31,7 +31,9 @@ Ceph Tentacle for shared storage. Corosync 3-node quorum.
 
 | Path | Purpose |
 |---|---|
-| `ansible/inventory/hosts.yml` | Canonical node list (MAC → hostname → group) |
+| `cluster-manifest.yml` | **Canonical Single Source of Truth** (MAC, IPs, RAM, NIC rules) |
+| `ansible/playbooks/00-generate-boot-config.yml` | Native Ansible playbook rendering boot configs from manifest |
+| `ansible/inventory/hosts.yml` | Canonical inventory node list |
 | `ansible/inventory/group_vars/all.yml` | PVE version pin, subnet, global defaults |
 | `ansible/inventory/host_vars/pve-0N.yml` | Per-node: RAM, NIC bus paths, disk IDs, storage_profile |
 | `boot/matchbox/answers/pve-0N.toml` | Per-node Proxmox answer file (hostname, disk, network) |

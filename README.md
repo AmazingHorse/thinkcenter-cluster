@@ -40,8 +40,9 @@ See **[`docs/runbook.md`](docs/runbook.md)** for the full day-0 bring-up procedu
 age-keygen -o ~/.config/sops/age/keys.txt
 # Add public key to .sops.yaml
 
-# 2. Edit inventory — add your node MACs
-$EDITOR ansible/inventory/hosts.yml
+# 2. Edit single manifest — add MACs, IPs, and udev paths
+$EDITOR cluster-manifest.yml
+ansible-playbook ansible/playbooks/00-generate-boot-config.yml --connection=local
 $EDITOR ansible/inventory/host_vars/pve-01.yml   # repeat for pve-02, pve-03
 
 # 3. Fetch PVE ISO (verified by sha256)

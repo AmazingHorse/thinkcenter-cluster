@@ -37,6 +37,10 @@ age-keygen -o ~/.config/sops/age/keys.txt
 # Add the public key to .sops.yaml
 sed -i 's/age1REPLACE_WITH_YOUR_PUBLIC_KEY/age1<YOUR_PUBLIC_KEY>/' .sops.yaml
 
+# Generate all dependent boot and Ansible configuration files natively:
+
+ansible-playbook ansible/playbooks/00-generate-boot-config.yml --connection=local
+
 # Create and encrypt your secrets file
 cp ansible/secrets/vault.sops.yaml.example ansible/secrets/vault.sops.yaml
 # Edit the file with real values

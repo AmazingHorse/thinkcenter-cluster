@@ -1,0 +1,16 @@
+# Auto-generated from cluster-manifest.yml via Ansible 00-generate-boot-config.yml
+[global]
+keyboard = en-us
+country = us
+fqdn = {{ item.name }}.{{ cluster.domain }}
+mailto = ""
+timezone = America/New_York
+root_password = "REPLACE_WITH_SOPS_MANAGED_SECRET"
+
+[network]
+source = from-dhcp
+
+[disk-setup]
+filesystem = zfs
+zfs.raid = single
+disk_list = {{ item.os_disk }}
