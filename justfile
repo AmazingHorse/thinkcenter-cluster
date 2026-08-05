@@ -20,7 +20,7 @@ render:
 
 # Start the containerized boot stack (nginx + dnsmasq)
 up:
-    docker compose -f boot/docker-compose.yml up -d
+    docker compose -f boot/docker-compose.yml up -d --remove-orphans
 
 # Stop the boot stack containers
 down:
