@@ -65,7 +65,13 @@ if [[ ! -f "${ASSETS_DIR}/linux26" || ! -f "${ASSETS_DIR}/initrd.img" ]]; then
     7z x -y "${ASSETS_DIR}/${PVE_ISO}" boot/linux26 boot/initrd.img -o"${ASSETS_DIR}" >/dev/null
     mv "${ASSETS_DIR}/boot/linux26" "${ASSETS_DIR}/linux26"
     mv "${ASSETS_DIR}/boot/initrd.img" "${ASSETS_DIR}/initrd.img"
-    rmdir "${ASSETS_DIR}/boot" 2>/dev/null || true
+    echo "  [pxe] embedding ISO payload into initrd.img..."
+    if command -v cpio >/dev/null 2>&1 || command -v busybox >/dev/null 2>&1; then
+      (cd "${ASSETS_DIR}" && ln -sf "${PVE_ISO}" proxmox.iso && echo "proxmox.iso" | cpio -H newc -o >> "initrd.img")
+      echo "  [ok] ISO embedded into initrd.img for PXE boot"
+    else
+      echo "  [warn] cpio not found. Install with: apk add cpio"
+    fi
     echo "  [ok] kernel and initrd extracted"
   else
     echo "  [warn] 7z (p7zip) not found. Install with: apk add p7zip"
