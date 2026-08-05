@@ -9,7 +9,18 @@ dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
 
 enable-tftp
 tftp-root=/var/lib/matchbox/assets
-dhcp-boot=tag:!ipxe,undionly.kpxe
+
+# Match UEFI vs Legacy BIOS clients
+dhcp-match=set:efi-x86_64,option:client-arch,7
+dhcp-match=set:efi-x64,option:client-arch,9
+dhcp-match=set:efi-bc,option:client-arch,6
+
+# Boot binaries
+dhcp-boot=tag:efi-x86_64,tag:!ipxe,ipxe.efi
+dhcp-boot=tag:efi-x64,tag:!ipxe,ipxe.efi
+dhcp-boot=tag:efi-bc,tag:!ipxe,ipxe.efi
+dhcp-boot=tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,tag:!ipxe,undionly.kpxe
+
 dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe
 dhcp-userclass=set:ipxe,iPXE
 domain={{ cluster.domain }}
