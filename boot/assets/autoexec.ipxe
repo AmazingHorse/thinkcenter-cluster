@@ -1,3 +1,0 @@
-#!/ipxe
-dhcp
-chain http://192.168.50.191:8080/boot.ipxe?mac=${net0/mac:hexhyp}
