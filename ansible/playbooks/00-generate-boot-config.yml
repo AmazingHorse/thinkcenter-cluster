@@ -48,6 +48,12 @@
         mode: "0644"
       loop: "{{ nodes }}"
 
+    - name: Render Matchbox Profile JSON
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/pxe-proxmox.json.j2"
+        dest: "{{ playbook_dir }}/../../boot/matchbox/profiles/pxe-proxmox.json"
+        mode: "0644"
+
     - name: Render Proxmox Answer TOML files
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"

@@ -1,6 +1,6 @@
 {
   "id": "pxe-proxmox",
-  "name": "Proxmox VE 9.2 Unattended Install",
+  "name": "Proxmox VE {{ pve_version }} Unattended Install",
   "ignition_id": "",
   "boot": {
     "kernel": "/assets/linux26",
@@ -10,7 +10,7 @@
     "args": [
       "initrd=initrd.img",
       "vga=788",
-      "proxmox-auto-install-answer-file-url=http://192.168.50.191:8080/assets/answers/{{ .metadata.hostname }}.toml",
+      "proxmox-auto-install-answer-file-url=http://{{ cluster.boot_server_ip }}:8080/assets/answers/{{ .metadata.hostname }}.toml",
       "proxmox-auto-install-answer-file-url-cert-fingerprint=",
       "quiet"
     ]
