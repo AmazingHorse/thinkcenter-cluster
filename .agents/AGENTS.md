@@ -68,6 +68,7 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 - PVE SDN EVPN requires `frr` in BGP/EVPN mode (frr is installed; OSPF for cluster routing is separate config)
 - Ceph cluster_network is `10.10.0.0/8` — covers all three /30 subnets; OSPF makes them mutually routable
 - VM bridge (`vmbr0`) shares eth-mgmt 1G with management and Corosync ring 0 during POC
+- M.2 WiFi 2.5G NIC (eth-cluster-b) uses 6-inch ribbon cable: route away from CPU VRMs; use `ethtool` if link renegotiation occurs
 
 ## Scratchpad
 

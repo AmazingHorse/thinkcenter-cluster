@@ -11,16 +11,20 @@
 - name: Configure Ceph OSD partition (interim_single_ssd profile)
   when: storage_profile == 'interim_single_ssd'
   block:
-    - name: Create partition 2 for Ceph OSD (if not already partitioned)
+    - name: Check existing disk partitions
+      ansible.builtin.command:
+        cmd: "parted -s {{ ceph_osd_disk }} print"
+      register: disk_parted_info
+      changed_when: false
+
+    - name: Create partition 2 for Ceph OSD (only if not present)
       ansible.builtin.command:
         cmd: >
           parted -s {{ ceph_osd_disk }} --
           mkpart primary 50% 100%
-      args:
-        creates: "{{ ceph_osd_partition }}"
-      # Note: partition 1 (ZFS rpool) was created by Proxmox installer.
-      # This creates partition 2 from 50% onward for Ceph.
-      # Adjust the percentage based on desired OS vs Ceph OSD split.
+      when: "'2 ' not in disk_parted_info.stdout"
+      # Note: Partition 1 (ZFS rpool) was created by Proxmox ISO installer.
+      # This safely creates Partition 2 from 50% to 100% for Ceph OSD only if missing.
 
 - name: No additional partitioning needed (target_nvme_ssd profile)
   when: storage_profile == 'target_nvme_ssd'

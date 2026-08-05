@@ -1,47 +1,65 @@
-# Single Source of Truth Manifest for ThinkCentre Cluster
-
+# ------------------------------------------------------------------------------
+# SECTION 1: GLOBAL DESIGN CHOICES (You decide these)
+# ------------------------------------------------------------------------------
 cluster:
   name: "thinkcenter"
   domain: "cluster.local"
   pve_version: "9.2"
-  pve_iso_sha256: "REPLACE_WITH_OFFICIAL_SHA256"
   ceph_version: "tentacle"
   management_subnet: "192.168.50.0/24"
-  management_gateway: "192.168.50.1"
-  boot_server_ip: "192.168.50.1"
+  management_gateway: "192.168.50.1"      # Your router IP
+  boot_server_ip: "192.168.50.1"          # Your workstation IP running boot stack
 
+  # COLLECT: Copy SHA256 from https://www.proxmox.com/en/downloads
+  pve_iso_sha256: "REPLACE_WITH_OFFICIAL_SHA256"
+
+# ------------------------------------------------------------------------------
+# SECTION 2: NODE HARDWARE INVENTORY & TOPOLOGY
+# ------------------------------------------------------------------------------
 nodes:
+  # ============================================================================
+  # NODE 1 (pve01 — 16 GB Primary)
+  # ============================================================================
   - name: "pve01"
+    # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
     mac: "AA:BB:CC:DD:EE:01"
     ip: "192.168.50.10"
     ram_mb: 16384
-    storage_profile: "interim_single_ssd"
+    storage_profile: "interim_single_ssd"   # "interim_single_ssd" or "target_nvme_ssd" when nvme present
     os_disk: "/dev/sda"
     ceph_osd_disk: "/dev/sda"
     ceph_osd_partition: "/dev/sda2"
     zfs_arc_max_mb: 2457
+
+    # PRE-SET: Point-to-Point Mesh Links (No edits needed unless changing subnets)
     corosync_ring1_addr: "10.10.12.1"
     links:
-      - iface: "eth-cluster-a"
+      - iface: "eth-cluster-a"              # USB NIC -> connected to pve02
         peer: "pve02"
         local_ip: "10.10.12.1"
         prefix: 30
-      - iface: "eth-cluster-b"
+      - iface: "eth-cluster-b"              # WiFi slot NIC -> connected to pve03
         peer: "pve03"
         local_ip: "10.10.13.1"
         prefix: 30
+
+    # UDEV BUS PATHS (Locks NIC names regardless of plugin order)
     udev_rules:
       - stable_name: "eth-mgmt"
         match_key: "ID_PATH"
-        match_value: "pci-0000:00:1f.6"
+        match_value: "pci-0000:00:1f.6"     # STANDARD: Built-in Intel I219-LM on M910q
       - stable_name: "eth-cluster-a"
         match_key: "ID_PATH"
-        match_value: "usb-0:REPLACE_USB_PATH:1.0"
+        match_value: "usb-0:1.3:1.0"        # RECOMMENDED: Rear Top-Left USB (Port 3)
       - stable_name: "eth-cluster-b"
         match_key: "ID_PATH"
-        match_value: "pci-0000:01:00.0"
+        match_value: "pci-0000:01:00.0"     # STANDARD: M.2 WiFi slot on M910q
 
+  # ============================================================================
+  # NODE 2 (pve02 — 8 GB Worker)
+  # ============================================================================
   - name: "pve02"
+    # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
     mac: "AA:BB:CC:DD:EE:02"
     ip: "192.168.50.11"
     ram_mb: 8192
@@ -50,28 +68,34 @@ nodes:
     ceph_osd_disk: "/dev/sda"
     ceph_osd_partition: "/dev/sda2"
     zfs_arc_max_mb: 1228
+
     corosync_ring1_addr: "10.10.12.2"
     links:
-      - iface: "eth-cluster-a"
+      - iface: "eth-cluster-a"              # USB NIC -> connected to pve01
         peer: "pve01"
         local_ip: "10.10.12.2"
         prefix: 30
-      - iface: "eth-cluster-b"
+      - iface: "eth-cluster-b"              # WiFi slot NIC -> connected to pve03
         peer: "pve03"
         local_ip: "10.10.23.1"
         prefix: 30
+
     udev_rules:
       - stable_name: "eth-mgmt"
         match_key: "ID_PATH"
         match_value: "pci-0000:00:1f.6"
       - stable_name: "eth-cluster-a"
         match_key: "ID_PATH"
-        match_value: "usb-0:REPLACE_USB_PATH:1.0"
+        match_value: "usb-0:1.2:1.0"
       - stable_name: "eth-cluster-b"
         match_key: "ID_PATH"
         match_value: "pci-0000:01:00.0"
 
+  # ============================================================================
+  # NODE 3 (pve03 — 8 GB Worker)
+  # ============================================================================
   - name: "pve03"
+    # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
     mac: "AA:BB:CC:DD:EE:03"
     ip: "192.168.50.12"
     ram_mb: 8192
@@ -80,23 +104,25 @@ nodes:
     ceph_osd_disk: "/dev/sda"
     ceph_osd_partition: "/dev/sda2"
     zfs_arc_max_mb: 1228
+
     corosync_ring1_addr: "10.10.13.2"
     links:
-      - iface: "eth-cluster-a"
+      - iface: "eth-cluster-a"              # USB NIC -> connected to pve01
         peer: "pve01"
         local_ip: "10.10.13.2"
         prefix: 30
-      - iface: "eth-cluster-b"
+      - iface: "eth-cluster-b"              # WiFi slot NIC -> connected to pve02
         peer: "pve02"
         local_ip: "10.10.23.2"
         prefix: 30
+
     udev_rules:
       - stable_name: "eth-mgmt"
         match_key: "ID_PATH"
         match_value: "pci-0000:00:1f.6"
       - stable_name: "eth-cluster-a"
         match_key: "ID_PATH"
-        match_value: "usb-0:REPLACE_USB_PATH:1.0"
+        match_value: "usb-0:1.2:1.0"
       - stable_name: "eth-cluster-b"
         match_key: "ID_PATH"
         match_value: "pci-0000:01:00.0"
