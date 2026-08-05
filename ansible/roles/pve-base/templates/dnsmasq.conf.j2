@@ -1,11 +1,11 @@
 # Auto-generated from cluster-manifest.yml via Ansible 00-generate-boot-config.yml
 
 interface=eth0
-dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.100') }},{{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.199') }},12h
+# Enable ProxyDHCP mode to co-exist with home router DHCP
+dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') }},proxy
 dhcp-option=option:router,{{ cluster.management_gateway }}
 dhcp-option=option:netmask,255.255.255.0
 dhcp-option=option:dns-server,{{ cluster.management_gateway }}
-dhcp-authoritative
 
 {% for node in nodes %}
 dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
