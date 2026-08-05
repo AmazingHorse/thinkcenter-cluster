@@ -5,7 +5,8 @@ dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_re
 dhcp-option=option:router,{{ cluster.management_gateway }}
 dhcp-option=option:netmask,255.255.255.0
 dhcp-option=option:dns-server,{{ cluster.management_gateway }}
-dhcp-authoritative
+# Proxmox VE automated installer answer URL (DHCP Option 224)
+dhcp-option=224,"http://{{ cluster.boot_server_ip }}:8080/assets/answers/"
 
 {% for node in nodes %}
 dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}

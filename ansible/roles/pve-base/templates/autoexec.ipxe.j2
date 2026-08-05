@@ -1,6 +1,6 @@
 #!ipxe
 echo Booting Proxmox VE over HTTP...
-kernel http://{{ cluster.boot_server_ip }}:8080/assets/linux26 initrd=initrd.img ramdisk_size=2097152 vga=788 proxmox-start-auto-installer proxmox-auto-install-answer-file-url=http://{{ cluster.boot_server_ip }}:8080/assets/answers/${mac:hexhyp}.toml quiet || goto failed
+kernel http://{{ cluster.boot_server_ip }}:8080/assets/linux26 initrd=initrd.img ramdisk_size=2097152 vga=788 proxmox-start-auto-installer proxmox-auto-install-url=http://{{ cluster.boot_server_ip }}:8080/assets/answers/${net0/mac:hexhyp}.toml proxmox-auto-install-answer-file-url=http://{{ cluster.boot_server_ip }}:8080/assets/answers/${net0/mac:hexhyp}.toml quiet || goto failed
 initrd http://{{ cluster.boot_server_ip }}:8080/assets/initrd.img || goto failed
 boot || goto failed
 
