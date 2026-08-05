@@ -13,6 +13,7 @@ Complete bring-up procedure from zero to a working 3-node Proxmox + Ceph cluster
 | `age` + `age-keygen` | https://github.com/FiloSottile/age/releases |
 | `sops` | https://github.com/getsops/sops/releases |
 | `ansible` ≥ 2.17 | `pip install ansible` |
+| `just` | `apk add just` / `apt install just` |
 | `docker` + `docker compose` | In boot server VM (Linux) |
 | `git` | On your workstation |
 
