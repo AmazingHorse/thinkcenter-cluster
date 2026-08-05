@@ -32,7 +32,7 @@ fetch_if_missing() {
     echo "  [skip] $(basename "${dest}") already present"
   else
     echo "  [fetch] $(basename "${dest}")"
-    curl -fL --progress-bar -o "${dest}" "${url}"
+    curl -fL --progress-bar -C - -o "${dest}" "${url}" || curl -fL --progress-bar -o "${dest}" "${url}"
   fi
 }
 
@@ -40,18 +40,40 @@ verify_sha256() {
   local file="$1" expected="$2"
   if [[ "${expected}" == "REPLACE_WITH_OFFICIAL_SHA256" || -z "${expected}" ]]; then
     echo "  [warn] SHA256 not configured in cluster-manifest.yml — skipping verification for $(basename "${file}")"
-    echo "         Update pve_iso_sha256 in cluster-manifest.yml to enable verification."
     return 0
   fi
   echo "  [verify] $(basename "${file}")"
-  echo "${expected}  ${file}" | sha256sum -c > /dev/null
-  echo "  [ok] checksum verified"
+  if echo "${expected}  ${file}" | sha256sum -c > /dev/null 2>&1; then
+    echo "  [ok] checksum verified"
+    return 0
+  else
+    echo "  [fail] checksum mismatch for $(basename "${file}")"
+    return 1
+  fi
+}
+
+fetch_and_verify_iso() {
+  local url="$1" dest="$2" expected_sha="$3"
+  if [[ -f "${dest}" ]]; then
+    if verify_sha256 "${dest}" "${expected_sha}"; then
+      echo "  [skip] $(basename "${dest}") already present and verified"
+      return 0
+    else
+      echo "  [clean] removing corrupted/partial file $(basename "${dest}")"
+      rm -f "${dest}"
+      # Also remove extracted kernel/initrd so they are re-extracted from valid ISO
+      rm -f "${ASSETS_DIR}/linux26" "${ASSETS_DIR}/initrd.img"
+    fi
+  fi
+
+  echo "  [fetch] downloading $(basename "${dest}")"
+  curl -fL --progress-bar -C - -o "${dest}" "${url}" || curl -fL --progress-bar -o "${dest}" "${url}"
+  verify_sha256 "${dest}" "${expected_sha}"
 }
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
 echo "==> Fetching Proxmox VE ISO (${PVE_ISO})"
-fetch_if_missing "${PVE_URL}" "${ASSETS_DIR}/${PVE_ISO}"
-verify_sha256 "${ASSETS_DIR}/${PVE_ISO}" "${PVE_SHA256}"
+fetch_and_verify_iso "${PVE_URL}" "${ASSETS_DIR}/${PVE_ISO}" "${PVE_SHA256}"
 
 echo "==> Fetching iPXE binaries"
 fetch_if_missing "${IPXE_URL}" "${ASSETS_DIR}/undionly.kpxe"

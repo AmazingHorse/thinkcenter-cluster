@@ -14,6 +14,10 @@ default:
 fetch:
     bash boot/scripts/fetch-assets.sh
 
+# Wipe downloaded ISOs, extracted kernel assets, and generated answers
+clean:
+    rm -f boot/assets/*.iso boot/assets/*.img boot/assets/linux26 boot/assets/answers/*.toml
+
 # Render boot server configs & host_vars from cluster-manifest.yml
 render:
     ansible-playbook ansible/playbooks/00-generate-boot-config.yml
@@ -45,3 +49,16 @@ site:
 status:
     docker compose -f boot/docker-compose.yml ps
     ansible-inventory -i ansible/inventory/hosts.yml --list
+
+# Verify boot server HTTP endpoints (iPXE script, answer POST, kernel, initrd)
+test ip="localhost":
+    @echo "==> 1. Testing GET /autoexec.ipxe..."
+    curl -sf http://{{ ip }}:8080/autoexec.ipxe | head -n 4
+    @echo "\n==> 2. Testing POST /assets/answers/pve01.toml (Simulating proxmox-fetch-answer)..."
+    curl -sf -X POST http://{{ ip }}:8080/assets/answers/pve01.toml | head -n 6
+    @echo "\n==> 3. Testing HEAD /assets/linux26..."
+    curl -sfI http://{{ ip }}:8080/assets/linux26 | grep -i "HTTP\|Content-Length"
+    @echo "\n==> 4. Testing HEAD /assets/initrd.img..."
+    curl -sfI http://{{ ip }}:8080/assets/initrd.img | grep -i "HTTP\|Content-Length"
+    @echo "\n[OK] All boot server endpoints operational!"
+
