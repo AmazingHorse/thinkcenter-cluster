@@ -24,14 +24,18 @@ dhcp-match=set:ipxe,175
 dhcp-userclass=set:ipxe,iPXE
 dhcp-userclass=set:ipxe,ipxe
 
-# Explicit Option 66 (Next Server) and Option 67 (Bootfile Name)
+# Explicit Option 66 (Next Server)
 dhcp-option=66,"{{ cluster.boot_server_ip }}"
-dhcp-option=tag:!ipxe,tag:efi-x86_64,67,"snponly.efi"
-dhcp-option=tag:!ipxe,tag:efi-x64,67,"snponly.efi"
-dhcp-option=tag:!ipxe,tag:efi-bc,67,"snponly.efi"
-dhcp-option=tag:!ipxe,tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,67,"undionly.kpxe"
 
-# Boot script for iPXE clients (HTTP chainload from nginx)
+# Non-iPXE UEFI clients -> load ipxe.efi (full native drivers for Intel I219-LM)
+dhcp-boot=tag:!ipxe,tag:efi-x86_64,ipxe.efi
+dhcp-boot=tag:!ipxe,tag:efi-x64,ipxe.efi
+dhcp-boot=tag:!ipxe,tag:efi-bc,ipxe.efi
+
+# Non-iPXE Legacy BIOS clients -> load undionly.kpxe
+dhcp-boot=tag:!ipxe,tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,undionly.kpxe
+
+# iPXE clients -> chainload autoexec.ipxe over HTTP
 dhcp-option=tag:ipxe,67,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
 dhcp-boot=tag:ipxe,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
 
