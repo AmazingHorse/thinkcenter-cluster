@@ -22,7 +22,7 @@ PVE_ISO="proxmox-ve_${PVE_VERSION}-1.iso"
 PVE_URL="https://enterprise.proxmox.com/iso/${PVE_ISO}"
 
 IPXE_URL="https://boot.ipxe.org/undionly.kpxe"
-IPXE_EFI_URL="https://boot.ipxe.org/ipxe.efi"
+IPXE_EFI_URL="https://boot.ipxe.org/x86_64-efi/ipxe.efi"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 fetch_if_missing() {
