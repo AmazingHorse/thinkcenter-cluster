@@ -25,6 +25,7 @@ dhcp-match=set:ipxe,175
 dhcp-userclass=set:ipxe,iPXE
 dhcp-userclass=set:ipxe,ipxe
 dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe
+dhcp-option-force=tag:ipxe,67,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe
 domain={{ cluster.domain }}
 local=/{{ cluster.domain }}/
 expand-hosts
