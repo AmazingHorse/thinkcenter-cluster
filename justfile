@@ -22,17 +22,17 @@ clean:
 render:
     ansible-playbook ansible/playbooks/00-generate-boot-config.yml
 
-# Start the containerized boot stack (nginx + dnsmasq)
+# Start/reload the containerized boot stack (forces config reload)
 up:
-    docker compose -f boot/docker-compose.yml up -d --remove-orphans
+    docker compose -f boot/docker-compose.yml up -d --force-recreate --remove-orphans
 
 # Stop the boot stack containers
 down:
     docker compose -f boot/docker-compose.yml down
 
-# View live container logs from the boot stack
+# View live container logs (usage: just logs or just logs dnsmasq)
 logs service="":
-    docker compose -f boot/docker-compose.yml logs -f {{ service }}
+    -@docker compose -f boot/docker-compose.yml logs -f {{ service }}
 
 # Idempotent full boot stack bring-up: fetch assets, render configs, start stack
 standup: fetch render up
