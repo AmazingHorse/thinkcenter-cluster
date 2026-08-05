@@ -20,7 +20,7 @@ services:
     #   GET /assets/<file>        → PVE ISO, ipxe binaries
 
   dnsmasq:
-    image: ghcr.io/jpillora/dnsmasq:latest
+    image: jpillora/dnsmasq:latest
     restart: unless-stopped
     network_mode: host
     cap_add:
