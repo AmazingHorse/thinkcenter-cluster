@@ -14,16 +14,11 @@ dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
 enable-tftp
 tftp-root=/var/lib/matchbox/assets
 
-# Match UEFI vs Legacy BIOS clients
-dhcp-match=set:efi-x86_64,option:client-arch,7
-dhcp-match=set:efi-x64,option:client-arch,9
-dhcp-match=set:efi-bc,option:client-arch,6
-
-# Boot binaries
-dhcp-boot=tag:efi-x86_64,tag:!ipxe,snponly.efi
-dhcp-boot=tag:efi-x64,tag:!ipxe,snponly.efi
-dhcp-boot=tag:efi-bc,tag:!ipxe,snponly.efi
-dhcp-boot=tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,tag:!ipxe,undionly.kpxe
+# ProxyDHCP PXE Services
+pxe-prompt="Booting Proxmox VE Cluster...", 1
+pxe-service=x86-64_EFI, "Proxmox VE Installer", snponly.efi
+pxe-service=6, "Proxmox VE Installer BC", snponly.efi
+pxe-service=X86PC, "Proxmox VE Installer Legacy", undionly.kpxe
 
 # iPXE detection (Option 175 + User-Class)
 dhcp-match=set:ipxe,175
