@@ -43,7 +43,7 @@ verify_sha256() {
     return 0
   fi
   echo "  [verify] $(basename "${file}")"
-  echo "${expected}  ${file}" | sha256sum --check --quiet
+  echo "${expected}  ${file}" | sha256sum -c > /dev/null
   echo "  [ok] checksum verified"
 }
 

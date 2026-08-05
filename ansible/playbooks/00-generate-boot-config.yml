@@ -8,10 +8,15 @@
   vars_files:
     - "../../cluster-manifest.yml"
   tasks:
+    - name: Check if secrets file exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../secrets/vault.sops.yaml"
+      register: vault_file
+
     - name: Load secrets if available
       ansible.builtin.include_vars:
         file: "../secrets/vault.sops.yaml"
-        ignore_missing: true
+      when: vault_file.stat.exists
 
     - name: Ensure config & inventory directories exist
       ansible.builtin.file:
