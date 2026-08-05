@@ -1,5 +1,7 @@
-# ── Boot assets (large binaries, fetched by script) ─────────────────────────
-boot/matchbox/assets/
+# ── Boot assets & generated configs ──────────────────────────────────────────
+boot/assets/
+boot/dnsmasq/dnsmasq.conf
+ansible/inventory/host_vars/
 
 # ── Secrets & keys ───────────────────────────────────────────────────────────
 *.vault-pass
