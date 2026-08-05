@@ -3,7 +3,7 @@
   "name": "{{ item.name }}",
   "profile": "pxe-proxmox",
   "selector": {
-    "mac": "{{ item.mac }}"
+    "mac": "{{ item.mac | lower }}"
   },
   "metadata": {
     "hostname": "{{ item.name }}"
