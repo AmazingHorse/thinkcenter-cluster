@@ -25,8 +25,9 @@ services:
     network_mode: host
     cap_add:
       - NET_ADMIN
+    command: ["-k", "-C", "/etc/dnsmasq/dnsmasq.conf"]
     volumes:
-      - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:ro
+      - ./dnsmasq:/etc/dnsmasq:ro
       - ./matchbox/assets:/var/lib/matchbox/assets:ro
     # dnsmasq provides:
     #   DHCP with static leases (MAC → IP)

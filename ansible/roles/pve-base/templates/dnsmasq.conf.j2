@@ -24,8 +24,11 @@ dhcp-boot=tag:efi-x64,tag:!ipxe,snponly.efi
 dhcp-boot=tag:efi-bc,tag:!ipxe,snponly.efi
 dhcp-boot=tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,tag:!ipxe,undionly.kpxe
 
-dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe
+# iPXE detection (Option 175 + User-Class)
+dhcp-match=set:ipxe,175
 dhcp-userclass=set:ipxe,iPXE
+dhcp-userclass=set:ipxe,ipxe
+dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/boot.ipxe
 domain={{ cluster.domain }}
 local=/{{ cluster.domain }}/
 expand-hosts
