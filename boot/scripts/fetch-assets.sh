@@ -66,9 +66,9 @@ if [[ ! -f "${ASSETS_DIR}/linux26" || ! -f "${ASSETS_DIR}/initrd.img" ]]; then
     mv "${ASSETS_DIR}/boot/linux26" "${ASSETS_DIR}/linux26"
     mv "${ASSETS_DIR}/boot/initrd.img" "${ASSETS_DIR}/initrd.img"
     echo "  [pxe] embedding ISO payload into initrd.img..."
-    if command -v cpio >/dev/null 2>&1 || command -v busybox >/dev/null 2>&1; then
-      (cd "${ASSETS_DIR}" && ln -sf "${PVE_ISO}" proxmox.iso && echo "proxmox.iso" | cpio -H newc -o >> "initrd.img")
-      echo "  [ok] ISO embedded into initrd.img for PXE boot"
+    if command -v cpio >/dev/null 2>&1; then
+      (cd "${ASSETS_DIR}" && echo "${PVE_ISO}" | cpio -H newc -o >> "initrd.img")
+      echo "  [ok] ISO embedded into initrd.img (size should now be ~1.6GB)"
     else
       echo "  [warn] cpio not found. Install with: apk add cpio"
     fi
