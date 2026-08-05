@@ -75,6 +75,6 @@
 
     - name: Inject proxmox-auto-installer-mode into initrd.img ramdisk
       ansible.builtin.shell: |
-        cd "{{ playbook_dir }}/../../boot/assets" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o | zstd -1 -T0 >> initrd.img && rm -f proxmox-auto-installer-mode
+        cd "{{ playbook_dir }}/../../boot/assets" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o >> initrd.img && rm -f proxmox-auto-installer-mode
       when: initrd_file.stat.exists
       ignore_errors: true

@@ -107,8 +107,8 @@ mode = "http"
 url = "http://${BOOT_SERVER_IP}:8080/assets/answers/"
 EOF
     if command -v cpio >/dev/null 2>&1 && command -v zstd >/dev/null 2>&1; then
-      (cd "${ASSETS_DIR}" && ln -f "${PVE_ISO}" proxmox.iso && printf "proxmox.iso\nproxmox-auto-installer-mode\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
-      echo "  [ok] proxmox.iso & proxmox-auto-installer-mode zstd-compressed and appended to initrd.img"
+      (cd "${ASSETS_DIR}" && ln -f "${PVE_ISO}" proxmox.iso && printf "proxmox.iso\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
+      echo "  [ok] proxmox.iso & proxmox-auto-installer-mode appended to initrd.img"
     else
       echo "  [warn] cpio or zstd not found. Install with: apk add cpio zstd"
     fi
