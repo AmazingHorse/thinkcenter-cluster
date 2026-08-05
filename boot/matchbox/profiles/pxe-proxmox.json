@@ -3,11 +3,13 @@
   "name": "Proxmox VE 9.2 Unattended Install",
   "ignition_id": "",
   "boot": {
-    "kernel": "/assets/proxmox-ve_9.2-1.iso",
-    "initrd": [],
+    "kernel": "/assets/linux26",
+    "initrd": [
+      "/assets/initrd.img"
+    ],
     "args": [
-      "auto=true",
-      "priority=critical",
+      "initrd=initrd.img",
+      "vga=788",
       "proxmox-auto-install-answer-file-url=http://{{ .request.query.MATCHBOX_SERVER }}/matchbox/answers/{{ .request.query.MATCHBOX_MAC }}.toml",
       "proxmox-auto-install-answer-file-url-cert-fingerprint=",
       "quiet"

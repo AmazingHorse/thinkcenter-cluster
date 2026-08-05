@@ -58,6 +58,22 @@ fetch_if_missing "${IPXE_URL}" "${ASSETS_DIR}/undionly.kpxe"
 fetch_if_missing "${IPXE_EFI_URL}" "${ASSETS_DIR}/ipxe.efi"
 fetch_if_missing "${IPXE_SNP_URL}" "${ASSETS_DIR}/snponly.efi"
 
+echo "==> Extracting Proxmox kernel & initrd from ISO"
+if [[ ! -f "${ASSETS_DIR}/linux26" || ! -f "${ASSETS_DIR}/initrd.img" ]]; then
+  if command -v 7z >/dev/null 2>&1; then
+    echo "  [extract] extracting boot/linux26 and boot/initrd.img using 7z..."
+    7z x -y "${ASSETS_DIR}/${PVE_ISO}" boot/linux26 boot/initrd.img -o"${ASSETS_DIR}" >/dev/null
+    mv "${ASSETS_DIR}/boot/linux26" "${ASSETS_DIR}/linux26"
+    mv "${ASSETS_DIR}/boot/initrd.img" "${ASSETS_DIR}/initrd.img"
+    rmdir "${ASSETS_DIR}/boot" 2>/dev/null || true
+    echo "  [ok] kernel and initrd extracted"
+  else
+    echo "  [warn] 7z (p7zip) not found. Install with: apk add p7zip"
+  fi
+else
+  echo "  [skip] linux26 and initrd.img already present"
+fi
+
 echo ""
 echo "Assets ready in ${ASSETS_DIR}:"
 ls -lh "${ASSETS_DIR}"
