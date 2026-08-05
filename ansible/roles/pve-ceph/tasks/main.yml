@@ -35,7 +35,9 @@
       ansible.builtin.command:
         cmd: pveceph mon create
       delegate_to: "{{ item }}"
-      loop: "{{ groups['proxmox_workers'] }}"
+      loop: "{{ groups['proxmox_workers'] | intersect(ansible_play_hosts) }}"
+      # Only targets workers that are actually reachable in this play run.
+      # If a worker isn't up yet, re-run this playbook after it joins.
 
 - name: Add Ceph OSD on this node
   when: ceph_action == 'add_osd'

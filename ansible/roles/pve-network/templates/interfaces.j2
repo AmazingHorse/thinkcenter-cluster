@@ -1,12 +1,11 @@
 # Managed by Ansible — pve-network role
-# Three-plane network: management/Corosync (eth-mgmt), Ceph (eth-ceph), VMs (eth-vm).
-# VLAN-ready: set vlan_id_* vars in group_vars to add tagging (Phase 2).
-# SDN-ready: vm_bridge var is abstracted for Phase 3.
+# Full-mesh cluster fabric: eth-cluster-a and eth-cluster-b are direct peer links.
+# eth-mgmt connects to LAN switch and carries management, Corosync ring 0, and VMs.
 
 auto lo
 iface lo inet loopback
 
-# ── Management + Corosync ring 0 ─────────────────────────────────────────────
+# ── Management + Corosync ring 0 + VM bridge ──────────────────────────────────
 auto {{ nic_mgmt }}
 iface {{ nic_mgmt }} inet static
     address {{ ansible_host }}/24
@@ -15,23 +14,21 @@ iface {{ nic_mgmt }} inet static
     vlan-id {{ vlan_id_mgmt }}
 {% endif %}
 
-# ── Ceph storage (raw, no bridge) ─────────────────────────────────────────────
-auto {{ nic_ceph }}
-iface {{ nic_ceph }} inet manual
-{% if vlan_id_ceph is not none %}
-    vlan-id {{ vlan_id_ceph }}
-{% endif %}
-
-# ── VM bridge (vmbr1 backed by eth-vm) ────────────────────────────────────────
-auto {{ nic_vm }}
-iface {{ nic_vm }} inet manual
-{% if vlan_id_vm is not none %}
-    vlan-id {{ vlan_id_vm }}
-{% endif %}
-
 auto {{ vm_bridge }}
 iface {{ vm_bridge }} inet manual
-    bridge-ports {{ nic_vm }}
+    bridge-ports {{ nic_mgmt }}
     bridge-stp off
     bridge-fd 0
     bridge-vlan-aware yes
+# Note: VM bridge shares eth-mgmt during POC. Phase 3 SDN replaces this bridge.
+
+# ── Cluster fabric — direct peer links ────────────────────────────────────────
+# Point-to-point /30 subnets. OSPF (frr) redistributes routes between them.
+{% for link in cluster_links %}
+auto {{ link.iface }}
+iface {{ link.iface }} inet static
+    address {{ link.local_ip }}/{{ link.prefix }}
+    # Direct cable to {{ link.peer }}
+    post-up ip route add {{ ceph_network_cluster }} dev {{ link.iface }} scope link || true
+
+{% endfor %}

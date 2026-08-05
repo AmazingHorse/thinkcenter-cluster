@@ -28,14 +28,18 @@ vlan_id_vm: ~
 # Requires frr package (installed by pve-base but unconfigured when false).
 pve_sdn_enabled: false
 
-# ── NIC stable names (set by udev — see roles/pve-base/templates/70-cluster-nics.rules.j2)
+# ── NIC stable names ─────────────────────────────────────────────────────────
+# eth-mgmt:      built-in 1G, connects to LAN switch
+# eth-cluster-a: USB 2.5G, direct cable to one peer node
+# eth-cluster-b: WiFi-slot 2.5G, direct cable to other peer node
+# Peer assignments (which cable goes where) defined in host_vars per node.
 nic_mgmt: "eth-mgmt"
-nic_ceph: "eth-ceph"
-nic_vm: "eth-vm"
+nic_cluster_a: "eth-cluster-a"
+nic_cluster_b: "eth-cluster-b"
 
 # ── VM bridge ─────────────────────────────────────────────────────────────────
-# Abstracted so SDN VNet name can replace vmbr1 in Phase 3.
-vm_bridge: "vmbr1"
+# VMs share eth-mgmt during POC. SDN VNet name replaces vmbr0 in Phase 3.
+vm_bridge: "vmbr0"
 
 # ── Ansible connection ────────────────────────────────────────────────────────
 ansible_user: root
@@ -46,14 +50,24 @@ pve_remove_enterprise_repo: true
 pve_add_no_subscription_repo: true
 
 # ── Corosync ──────────────────────────────────────────────────────────────────
+# Ring 0: management NIC (LAN switch). Ring 1: cluster fabric (direct links).
+# Each node's specific ring1 IP is set in host_vars (it differs per node).
 corosync_ring0_iface: "{{ nic_mgmt }}"
-corosync_ring1_iface: ~   # Set to nic name to add a second ring later
+corosync_ring1_enabled: true   # both direct-link NICs form ring 1 via OSPF-routed IPs
 
 # ── Ceph ──────────────────────────────────────────────────────────────────────
-ceph_network_cluster: "192.168.50.0/24"   # interim: same subnet; separate in Phase 2
+# cluster_network covers all three /30 direct-link subnets (OSPF routes between them)
+# public_network is the management subnet (for client/VM access to Ceph)
+ceph_network_cluster: "10.10.0.0/8"
 ceph_network_public: "192.168.50.0/24"
 ceph_pool_name: "ceph-vm"
-ceph_pool_replicas: 3   # one replica per node
+ceph_pool_replicas: 3
+
+# ── OSPF (frr) ────────────────────────────────────────────────────────────────
+# OSPF runs on cluster NICs only; redistributes connected /30 routes.
+# frr is already installed by pve-base role.
+ospf_area: "0.0.0.0"   # single backbone area
+ospf_enabled: true
 
 # ── HA manager ───────────────────────────────────────────────────────────────
 # Used by the rolling-upgrade task to safely drain a node before reboot.

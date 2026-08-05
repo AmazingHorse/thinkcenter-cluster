@@ -54,8 +54,8 @@
     cmd: "ip link show {{ item }}"
   loop:
     - "{{ nic_mgmt }}"
-    - "{{ nic_ceph }}"
-    - "{{ nic_vm }}"
+    - "{{ nic_cluster_a }}"
+    - "{{ nic_cluster_b }}"
   changed_when: false
   register: nic_check
   failed_when: nic_check.rc != 0

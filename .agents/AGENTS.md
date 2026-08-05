@@ -17,12 +17,14 @@ Ceph Tentacle for shared storage. Corosync 3-node quorum.
 | OS filesystem | ZFS single-disk | Snapshot support; ARC capped by `zfs_arc_max` |
 | Storage interim | SSD partition 1 = ZFS, partition 2 = Ceph OSD | Single disk per node today |
 | Storage target | NVMe (OS) + SSD (Ceph OSD whole disk) | `storage_profile` var flip to migrate |
-| Network | Flat L2 POC; VLAN-ready (Mikrotik Phase 2); SDN-ready (EVPN Phase 3) | Incremental complexity |
-| NIC naming | udev bus-path rules → `eth-mgmt`, `eth-ceph`, `eth-vm` | No MAC lookup, stable across reboots |
+| Network | Flat L2 on eth-mgmt (POC); VLAN-ready (Mikrotik Phase 2); SDN-ready (EVPN Phase 3) | Incremental complexity |
+| Cluster fabric | Full mesh direct cables, no switch | 2 NICs × 3 nodes = 3 cables exactly |
+| Cluster routing | OSPF via frr on cluster links | Self-healing; frr already installed |
+| NIC naming | udev bus-path rules → `eth-mgmt`, `eth-cluster-a`, `eth-cluster-b` | Role-neutral; peer in host_vars |
 | Node identity | MAC → matchbox group → Ansible host_vars | Single source of truth in inventory |
 | Secrets | SOPS + age | Private key never in repo |
 | Boot stack host | Hyper-V External Switch VM (Windows) / native Linux | Docker Desktop breaks L2 DHCP on Windows |
-| SDN | `pve_sdn_enabled: false` flag; `frr` installed but dormant | Learning goal, Phase 3 |
+| SDN | `pve_sdn_enabled: false` flag; `frr` installed but dormant for SDN | Learning goal, Phase 3 |
 | Automation split | Ansible through cluster formation; Terraform stub for VM workloads later | No Terraform until cluster is stable |
 
 ## File Ownership Map
@@ -45,11 +47,14 @@ Ceph Tentacle for shared storage. Corosync 3-node quorum.
 
 ## Network Planes
 
-| Stable name | NIC | Use | Bridge |
+| Stable name | NIC | Use | Connected to |
 |---|---|---|---|
-| `eth-mgmt` | Built-in I219-LM 1G | Management + Corosync ring 0 | `vmbr0` |
-| `eth-ceph` | USB3 2.5G | Ceph OSD + monitor | (no bridge, raw) |
-| `eth-vm` | WiFi-slot 2.5G | VM traffic | `vmbr1` |
+| `eth-mgmt` | Built-in I219-LM 1G | Management + Corosync ring 0 + VMs (shared) | LAN switch |
+| `eth-cluster-a` | USB 2.5G | Cluster fabric (Ceph + Corosync ring 1) | Direct cable to one peer node |
+| `eth-cluster-b` | WiFi-slot 2.5G | Cluster fabric (Ceph + Corosync ring 1) | Direct cable to other peer node |
+
+Full mesh: pve-01↔pve-02 (one cable), pve-01↔pve-03 (one cable), pve-02↔pve-03 (one cable).
+IP subnets: 10.10.12.0/30, 10.10.13.0/30, 10.10.23.0/30. OSPF via frr routes between them.
 
 USB NIC **must** be in the same physical USB port on every node (runbook enforces this).
 
@@ -58,7 +63,9 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 - 8 GB RAM nodes: ZFS ARC capped at ~15% (~1.2 GB), Ceph OSD target 1 GB, Mon 512 MB
 - `network_mode: host` required for dnsmasq container (DHCP broadcast needs L2 access)
 - Windows boot stack: needs Hyper-V External Switch VM — Docker Desktop cannot serve DHCP to physical LAN
-- PVE SDN EVPN requires `frr` package (installed, unconfigured until `pve_sdn_enabled: true`)
+- PVE SDN EVPN requires `frr` in BGP/EVPN mode (frr is installed; OSPF for cluster routing is separate config)
+- Ceph cluster_network is `10.10.0.0/8` — covers all three /30 subnets; OSPF makes them mutually routable
+- VM bridge (`vmbr0`) shares eth-mgmt 1G with management and Corosync ring 0 during POC
 
 ## Scratchpad
 

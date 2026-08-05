@@ -8,5 +8,30 @@
     mode: "0644"
   notify: restart networking
 
+- name: Enable OSPF daemon in frr
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons
+    regexp: "^ospfd="
+    line: "ospfd=yes"
+  when: ospf_enabled
+  notify: restart frr
+
+- name: Deploy frr OSPF config
+  ansible.builtin.template:
+    src: frr-ospf.conf.j2
+    dest: /etc/frr/frr.conf
+    owner: frr
+    group: frr
+    mode: "0640"
+  when: ospf_enabled
+  notify: restart frr
+
+- name: Enable and start frr
+  ansible.builtin.systemd:
+    name: frr
+    enabled: true
+    state: started
+  when: ospf_enabled
+
 - name: Apply network configuration
   ansible.builtin.meta: flush_handlers

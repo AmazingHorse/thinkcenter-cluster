@@ -1,6 +1,7 @@
 ---
 # pve-02 — 8 GB RAM node
-# CONFIGURE: replace placeholder values with actual hardware details.
+# eth-cluster-a connects to pve-01, eth-cluster-b connects to pve-03
+# CONFIGURE: replace placeholder values.
 
 node_mac: "AA:BB:CC:DD:EE:02"
 node_ram_mb: 8192
@@ -10,16 +11,27 @@ os_disk: "/dev/sda"
 ceph_osd_disk: "/dev/sda"
 ceph_osd_partition: "/dev/sda2"
 
-# 15% of 8 GB ≈ 1228 MB
 zfs_arc_max_mb: 1228
+
+cluster_links:
+  - iface: eth-cluster-a
+    peer: pve-01
+    local_ip: "10.10.12.2"
+    prefix: 30
+  - iface: eth-cluster-b
+    peer: pve-03
+    local_ip: "10.10.23.1"
+    prefix: 30
+
+corosync_ring1_addr: "10.10.12.2"
 
 udev_rules:
   - stable_name: eth-mgmt
     match_key: ID_PATH
     match_value: "pci-0000:00:1f.6"
-  - stable_name: eth-ceph
+  - stable_name: eth-cluster-a
     match_key: ID_PATH
     match_value: "usb-0:REPLACE_USB_PATH:1.0"
-  - stable_name: eth-vm
+  - stable_name: eth-cluster-b
     match_key: ID_PATH
     match_value: "pci-0000:01:00.0"
