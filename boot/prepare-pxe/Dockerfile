@@ -1,12 +1,12 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # Install proxmox-auto-install-assistant and extraction tools.
 # This image is used by `just fetch` / `fetch-assets.sh` to prepare
 # PXE kernel + initrd from the Proxmox VE ISO.
 #
-# We use the pvetest repo to get a version that supports --pxe-loader ipxe.
-# The pve-no-subscription (stable) repo has 8.4.6 which predates that flag.
-# This only affects the BUILD TOOL — the actual cluster runs stable PVE 9.2.
+# We use Debian Trixie (13) which corresponds to Proxmox VE 9.x.
+# This gives us a proxmox-auto-install-assistant version (9.2+) that 
+# natively supports the --pxe-loader ipxe flag.
 #
 # Build once; rebuild when the image is stale or PVE version changes.
 
@@ -21,11 +21,10 @@ RUN apt-get update -qq && \
         p7zip-full \
     && rm -rf /var/lib/apt/lists/*
 
-# Add Proxmox pvetest repo for a newer proxmox-auto-install-assistant
-# that supports --pxe-loader ipxe (added after stable 8.4.6).
-RUN curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
-        -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg && \
-    echo 'deb http://download.proxmox.com/debian/pve bookworm pvetest' \
+# Add Proxmox trixie repo (stable)
+RUN curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg \
+        -o /etc/apt/trusted.gpg.d/proxmox-release-trixie.gpg && \
+    echo 'deb http://download.proxmox.com/debian/pve trixie pve-no-subscription' \
         > /etc/apt/sources.list.d/pve.list && \
     apt-get update -qq && \
     apt-get install -y -qq --no-install-recommends proxmox-auto-install-assistant && \
