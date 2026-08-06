@@ -39,7 +39,11 @@ Or via **Settings → Apps → Optional Features → More Windows features → H
 
 ## Step 3 — Create the Boot Server VM
 
-Download a minimal Debian or Alpine Linux ISO, then:
+Download a minimal **Debian 12 (bookworm)** or Alpine Linux ISO.
+
+> **Debian is the recommended boot server OS.** It can run `proxmox-auto-install-assistant`
+> natively (no Docker container needed for the ISO prepare step). Alpine also works but
+> requires Docker for the prepare step.
 
 1. **Hyper-V Manager → New → Virtual Machine**
 2. **Name**: `boot-server`
@@ -58,28 +62,38 @@ After install, note the VM's IP address — it will be on the same subnet as you
 
 SSH into the VM, then install required prerequisites:
 
+**Debian / Ubuntu (recommended):**
+```bash
+sudo apt update
+sudo apt install -y git bash curl p7zip-full docker.io docker-compose-v2 ansible just
+sudo usermod -aG docker $USER
+
+# Install proxmox-auto-install-assistant natively (skips Docker container in fetch-assets.sh)
+curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
+  | sudo tee /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg > /dev/null
+echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
+  | sudo tee /etc/apt/sources.list.d/pve.list
+sudo apt update && sudo apt install -y proxmox-auto-install-assistant
+```
+
+> With `proxmox-auto-install-assistant` on PATH, `fetch-assets.sh` runs it directly
+> without spinning up a Debian container. The container fallback still works if you skip this.
+
 **Alpine Linux:**
 ```bash
 # Enable community repository
 echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories
 
-# Update package index and install packages (including just command runner & ISO/cpio tools)
+# Update package index and install packages
+# (Docker is required for the debian:bookworm container that runs proxmox-auto-install-assistant)
 apk update
-apk add git bash curl p7zip cpio zstd xorriso docker docker-cli-compose python3 py3-pip py3-yaml py3-netaddr ansible just
+apk add git bash curl p7zip docker docker-cli-compose ansible just
 
 # Start and enable Docker service
 rc-update add docker boot
 service docker start
 ```
 
-**Debian / Ubuntu:**
-```bash
-sudo apt update
-sudo apt install -y git bash curl p7zip-full cpio zstd xorriso docker.io docker-compose-v2 ansible just
-sudo usermod -aG docker $USER
-```
-
----
 
 ## Step 5 — Mount or Clone the Repo in the VM
 

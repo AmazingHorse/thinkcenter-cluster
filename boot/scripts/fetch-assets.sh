@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # fetch-assets.sh — download and verify Proxmox VE ISO + iPXE binaries,
-# then use proxmox-auto-install-assistant inside a Debian container to
-# produce a prepared vmlinuz + initrd.img for PXE HTTP answer fetching.
+# then use proxmox-auto-install-assistant to produce a prepared vmlinuz +
+# initrd.img for PXE HTTP answer fetching.
 #
-# Requires: docker, curl, sha256sum
-# No longer requires: 7z, cpio, zstd, xorriso (all moved into the container)
+# Boot server OS support:
+#   Debian/Ubuntu/Proxmox host: install proxmox-auto-install-assistant natively
+#     (apt install proxmox-auto-install-assistant) — no Docker needed.
+#   Alpine or any other host: this script uses a debian:bookworm Docker
+#     container automatically when the binary is not found on PATH.
+#
+# Requires: curl, sha256sum
+# Native Debian: also needs proxmox-auto-install-assistant (apt install it)
+# Alpine/other:  also needs docker + p7zip
 
 set -euo pipefail
 
@@ -99,74 +106,133 @@ fetch_if_missing "${IPXE_SNP_URL}" "${ASSETS_DIR}/snponly.efi"
 
 # ── Prepare PXE kernel + initrd via proxmox-auto-install-assistant ────────────
 # The stock ISO's initrd.img does NOT support HTTP answer fetching.
-# proxmox-auto-install-assistant prepare-iso --pxe produces a vmlinuz/initrd.img
-# pair that has the fetch-from-http logic compiled in.
+# proxmox-auto-install-assistant prepare-iso embeds the fetch-from-http logic.
 #
-# We run it inside a debian:bookworm container so the host only needs Docker.
+# PXE output: tool tries --pxe-loader ipxe (≥some version) then --pxe.
+# If neither is supported, it falls back to producing a modified ISO and
+# extracting boot/vmlinuz + boot/initrd.img from it via 7z.
+#
+# On Debian/Ubuntu/Proxmox: install natively (no Docker):
+#   echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
+#     > /etc/apt/sources.list.d/pve.list
+#   curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
+#     -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg
+#   apt update && apt install proxmox-auto-install-assistant
+# On Alpine/other: this script uses a debian:bookworm Docker container.
 echo "==> Preparing PXE kernel + initrd via proxmox-auto-install-assistant"
 
 if [[ -f "${ASSETS_DIR}/linux26" && -f "${ASSETS_DIR}/initrd.img" ]]; then
   echo "  [skip] linux26 and initrd.img already present (delete to re-prepare)"
 else
   echo "  [info] answer URL baked in: ${ANSWER_URL}"
-  echo "  [info] pulling debian:bookworm and installing proxmox-auto-install-assistant..."
 
-  # Absolute host path that Docker can mount (resolve symlinks)
   HOST_ASSETS="$(realpath "${ASSETS_DIR}")"
-
-  docker run --rm \
-    -v "${HOST_ASSETS}:/assets" \
-    debian:bookworm \
-    bash -c "
-      set -euo pipefail
-      apt-get update -qq
-      apt-get install -y -qq curl xorriso ca-certificates gnupg 2>/dev/null
-
-      # Add Proxmox no-subscription repo for proxmox-auto-install-assistant
-      curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
-        -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg
-      echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
-        > /etc/apt/sources.list.d/pve.list
-      apt-get update -qq
-      apt-get install -y -qq proxmox-auto-install-assistant 2>/dev/null
-
-      echo '  [prepare-iso] running proxmox-auto-install-assistant...'
-      proxmox-auto-install-assistant prepare-iso \
-        /assets/${PVE_ISO} \
-        --fetch-from http \
-        --url '${ANSWER_URL}' \
-        --pxe \
-        --output /assets/pxe-prepared/
-
-      echo '  [done] prepared files:'
-      ls -lh /assets/pxe-prepared/
-    "
-
-  # The tool outputs vmlinuz + initrd.img (and optionally a .ipxe snippet)
-  # Rename to the filenames our Nginx + iPXE script already expect.
   PREPARED="${ASSETS_DIR}/pxe-prepared"
+  mkdir -p "${PREPARED}"
+
+  # run_prepare_iso <binary> <iso> <url> <outdir>
+  # Tries --pxe-loader ipxe, then --pxe, then ISO-only + 7z extraction.
+  run_prepare_iso() {
+    local binary="$1" iso="$2" url="$3" out="$4"
+    local base_args=(prepare-iso "${iso}" --fetch-from http --url "${url}" --output "${out}")
+
+    if "${binary}" "${base_args[@]}" --pxe-loader ipxe 2>/dev/null; then
+      echo "  [ok] prepared with --pxe-loader ipxe"
+    elif "${binary}" "${base_args[@]}" --pxe 2>/dev/null; then
+      echo "  [ok] prepared with --pxe"
+    else
+      # Neither PXE flag accepted — prepare modified ISO, extract via 7z
+      echo "  [warn] --pxe-loader/--pxe unsupported; preparing ISO + extracting via 7z"
+      "${binary}" "${base_args[@]}"
+      local found_iso
+      found_iso=$(find "${out}" -name "*.iso" | head -n1)
+      if [[ -z "${found_iso}" ]]; then
+        echo "ERROR: prepare-iso did not produce an ISO in ${out}" >&2
+        return 1
+      fi
+      echo "  [extract] extracting boot/ files from ${found_iso}"
+      7z x -y "${found_iso}" boot/vmlinuz boot/linux26 boot/initrd.img -o"${out}" > /dev/null 2>&1 || true
+    fi
+  }
+
+  if command -v proxmox-auto-install-assistant > /dev/null 2>&1; then
+    # ── Native path (Debian/Ubuntu/Proxmox boot server) ──────────────────────
+    echo "  [native] proxmox-auto-install-assistant found on PATH — running natively"
+    run_prepare_iso proxmox-auto-install-assistant \
+      "${ASSETS_DIR}/${PVE_ISO}" "${ANSWER_URL}" "${PREPARED}"
+
+  else
+    # ── Container fallback (Alpine or any host without the binary) ────────────
+    echo "  [container] proxmox-auto-install-assistant not found — using debian:bookworm"
+    echo "  [tip] On Debian/Ubuntu, install natively to skip this container step:"
+    echo "        apt install proxmox-auto-install-assistant (Proxmox no-sub repo)"
+
+    docker run --rm \
+      -v "${HOST_ASSETS}:/assets" \
+      debian:bookworm \
+      bash -c "
+        set -euo pipefail
+        apt-get update -qq
+        apt-get install -y -qq curl xorriso ca-certificates gnupg p7zip-full 2>/dev/null
+
+        curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
+          -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg
+        echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
+          > /etc/apt/sources.list.d/pve.list
+        apt-get update -qq
+        apt-get install -y -qq proxmox-auto-install-assistant 2>/dev/null
+
+        OUT=/assets/pxe-prepared
+        BASE=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}' --output \"\${OUT}\")
+
+        echo '  [prepare-iso] running...'
+        if proxmox-auto-install-assistant \"\${BASE[@]}\" --pxe-loader ipxe 2>/dev/null; then
+          echo '  [ok] --pxe-loader ipxe'
+        elif proxmox-auto-install-assistant \"\${BASE[@]}\" --pxe 2>/dev/null; then
+          echo '  [ok] --pxe'
+        else
+          echo '  [warn] PXE flags unsupported; preparing ISO + extracting via 7z'
+          proxmox-auto-install-assistant \"\${BASE[@]}\"
+          FOUND=\$(find \"\${OUT}\" -name '*.iso' | head -n1)
+          7z x -y \"\${FOUND}\" boot/vmlinuz boot/linux26 boot/initrd.img -o\"\${OUT}\" > /dev/null 2>&1 || true
+        fi
+
+        echo '  [done]'
+        ls -lh \"\${OUT}/\"
+      "
+  fi
+
+  # ── Move outputs into place ───────────────────────────────────────────────
   if [[ -f "${PREPARED}/vmlinuz" ]]; then
     mv "${PREPARED}/vmlinuz" "${ASSETS_DIR}/linux26"
     echo "  [ok] vmlinuz -> linux26"
   elif [[ -f "${PREPARED}/linux26" ]]; then
     mv "${PREPARED}/linux26" "${ASSETS_DIR}/linux26"
     echo "  [ok] linux26 moved"
+  elif [[ -f "${PREPARED}/boot/vmlinuz" ]]; then
+    mv "${PREPARED}/boot/vmlinuz" "${ASSETS_DIR}/linux26"
+    echo "  [ok] boot/vmlinuz -> linux26"
+  elif [[ -f "${PREPARED}/boot/linux26" ]]; then
+    mv "${PREPARED}/boot/linux26" "${ASSETS_DIR}/linux26"
+    echo "  [ok] boot/linux26 -> linux26"
   else
-    echo "ERROR: proxmox-auto-install-assistant did not produce a kernel file" >&2
-    ls -lh "${PREPARED}/" >&2
+    echo "ERROR: no kernel file found in ${PREPARED}/" >&2
+    ls -lhR "${PREPARED}/" >&2
     exit 1
   fi
 
   if [[ -f "${PREPARED}/initrd.img" ]]; then
     mv "${PREPARED}/initrd.img" "${ASSETS_DIR}/initrd.img"
     echo "  [ok] initrd.img moved"
+  elif [[ -f "${PREPARED}/boot/initrd.img" ]]; then
+    mv "${PREPARED}/boot/initrd.img" "${ASSETS_DIR}/initrd.img"
+    echo "  [ok] boot/initrd.img moved"
   else
-    echo "ERROR: proxmox-auto-install-assistant did not produce initrd.img" >&2
-    ls -lh "${PREPARED}/" >&2
+    echo "ERROR: no initrd.img found in ${PREPARED}/" >&2
+    ls -lhR "${PREPARED}/" >&2
     exit 1
   fi
 
-  # Keep any generated .ipxe snippet for reference, clean up temp dir
   rm -rf "${PREPARED}"
   echo "  [ok] PXE kernel + initrd ready"
 fi
