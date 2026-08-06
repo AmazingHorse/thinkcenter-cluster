@@ -200,7 +200,7 @@ else
   if ls "${PREPARED}"/*.iso >/dev/null 2>&1; then
     echo "  [cpio] Wrapping ISO into a CPIO archive for UEFI PXE compatibility..."
     mv "${PREPARED}"/*.iso "${PREPARED}/proxmox.iso"
-    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o > "${ASSETS_DIR}/proxmox-iso.cpio" 2>/dev/null)
+    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o > "${ASSETS_DIR}/proxmox-iso.cpio")
     echo "  [ok] ISO -> proxmox-iso.cpio"
   fi
 
