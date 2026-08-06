@@ -22,7 +22,8 @@ build-tools +args="":
 # Wipe extracted kernel assets & generated configs (keeps downloaded ISO intact)
 clean:
     rm -f boot/assets/linux26 boot/assets/initrd.img boot/assets/autoexec.ipxe
-    rm -f boot/assets/*.tmp boot/assets/auto-installer-mode.toml
+    rm -f boot/assets/*.tmp boot/assets/auto-installer-mode.toml boot/assets/autoexec.ipxe.generated
+    rm -f boot/assets/proxmox-prepared.iso boot/assets/proxmox-iso.cpio
     rm -rf boot/assets/answers/ boot/assets/pxe-prepared/
 
 # Full wipe including downloaded ISO files
