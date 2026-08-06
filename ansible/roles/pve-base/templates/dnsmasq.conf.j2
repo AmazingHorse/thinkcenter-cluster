@@ -38,7 +38,7 @@ dhcp-boot=tag:!ipxe,tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,undionly.kpxe
 
 # iPXE clients -> chainload autoexec.ipxe over HTTP
 dhcp-option=tag:ipxe,67,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
-dhcp-boot=tag:ipxe,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
+dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe
 
 domain={{ cluster.domain }}
 local=/{{ cluster.domain }}/
