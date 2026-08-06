@@ -157,13 +157,8 @@ else
   fi
 
   # ── Move outputs into place ───────────────────────────────────────────────
-  # The --pxe-loader flags produce *.pxe-vmlinuz and *.pxe-initrd.
-  # The 7z extraction fallback produces boot/vmlinuz and boot/initrd.img.
   
-  if ls "${PREPARED}"/*.pxe-vmlinuz >/dev/null 2>&1; then
-    mv "${PREPARED}"/*.pxe-vmlinuz "${ASSETS_DIR}/linux26"
-    echo "  [ok] *.pxe-vmlinuz -> linux26"
-  elif [[ -f "${PREPARED}/vmlinuz" ]]; then
+  if [[ -f "${PREPARED}/vmlinuz" ]]; then
     mv "${PREPARED}/vmlinuz" "${ASSETS_DIR}/linux26"
     echo "  [ok] vmlinuz -> linux26"
   elif [[ -f "${PREPARED}/linux26" ]]; then
@@ -181,10 +176,7 @@ else
     exit 1
   fi
 
-  if ls "${PREPARED}"/*.pxe-initrd >/dev/null 2>&1; then
-    mv "${PREPARED}"/*.pxe-initrd "${ASSETS_DIR}/initrd.img"
-    echo "  [ok] *.pxe-initrd -> initrd.img"
-  elif [[ -f "${PREPARED}/initrd.img" ]]; then
+  if [[ -f "${PREPARED}/initrd.img" ]]; then
     mv "${PREPARED}/initrd.img" "${ASSETS_DIR}/initrd.img"
     echo "  [ok] initrd.img moved"
   elif [[ -f "${PREPARED}/boot/initrd.img" ]]; then
@@ -196,10 +188,16 @@ else
     exit 1
   fi
 
-  # Also keep the generated PXE conf so we can inspect the exact kernel arguments
-  if ls "${PREPARED}"/*.pxe-conf >/dev/null 2>&1; then
-    mv "${PREPARED}"/*.pxe-conf "${ASSETS_DIR}/autoexec.pxe-conf"
-    echo "  [ok] *.pxe-conf -> autoexec.pxe-conf"
+  # Proxmox 9.2.8 generates boot.ipxe
+  if [[ -f "${PREPARED}/boot.ipxe" ]]; then
+    mv "${PREPARED}/boot.ipxe" "${ASSETS_DIR}/autoexec.ipxe.generated"
+    echo "  [ok] boot.ipxe -> autoexec.ipxe.generated"
+  fi
+  
+  # Proxmox 9.2.8 generates an ISO file alongside it, we should keep it
+  if ls "${PREPARED}"/*.iso >/dev/null 2>&1; then
+    mv "${PREPARED}"/*.iso "${ASSETS_DIR}/proxmox-prepared.iso"
+    echo "  [ok] ISO -> proxmox-prepared.iso"
   fi
 
   rm -rf "${PREPARED}"
