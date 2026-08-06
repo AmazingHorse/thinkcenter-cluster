@@ -78,9 +78,14 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 - **PXE Netboot Status & Resolved Issues**:
   - **iPXE Magic Header**: Must be `#!ipxe` (no leading slash); `#!/ipxe` causes silent parser rejection.
   - **HTTP Streaming**: `autoexec.ipxe` pulls `linux26` and `initrd.img` over HTTP for ~15s transfers.
-  - **ISO Embedding in Ramdisk**: `fetch-assets.sh` hardlinks (`ln -f`) `proxmox-ve_9.2-1.iso` to `proxmox.iso` and appends it via `cpio -H newc -o | zstd -1 -T0 >> initrd.img`. The payload MUST be `zstd` compressed to match `initrd.img`'s compression, and named `proxmox.iso` for `/init` detection.
-  - **Kernel Cmdline**: Requires `ramdisk_size=2097152` (2GB) to hold the 1.6GB image in memory.
+  - **Kernel Cmdline**: Requires `ramdisk_size=2097152` (2GB) to hold the 1.6GB image in memory. `ip=any:dhcp` is required so the kernel brings up all NICs and finds the live one (2nd of 2 on ThinkCentre M910q during install).
 - **Resolved Answer File Fetching Issue (Matchbox → Nginx Refactor)**:
-  - Matchbox replaced with `nginx:alpine` container. Nginx handles HTTP POST requests to `/assets/answers/*.toml` via `error_page 405 =200 $uri;`, serving answer files cleanly as 200 OK.
+  - Matchbox replaced with `nginx:alpine` container. Nginx handles HTTP POST requests to `/assets/answers/*.toml` via `proxy_method GET;` inside a named location, converting POST→GET so static files are served cleanly.
   - Ansible `00-generate-boot-config.yml` renders answers by both MAC (`80-86-f2-18-55-b6.toml`) and hostname (`pve01.toml`).
+- **CRITICAL: Stock initrd.img does NOT support HTTP answer fetching**:
+  - The `initrd.img` extracted directly from the Proxmox ISO is a **stock** installer ramdisk. It does not parse `proxmox-auto-installer-mode=http` kernel cmdline params.
+  - HTTP answer fetching (`proxmox-fetch-answer`) is only enabled when the ISO/initrd has been prepared by `proxmox-auto-install-assistant prepare-iso --fetch-from http`.
+  - `fetch-assets.sh` now runs `proxmox-auto-install-assistant` inside a `debian:bookworm` Docker container to produce the prepared `vmlinuz` (→ `linux26`) + `initrd.img` pair. The answer URL (`http://<boot_server_ip>:8080/assets/answers/`) is baked in at prepare time.
+  - `autoexec.ipxe.j2` no longer passes `proxmox-auto-installer-mode` or `proxmox-auto-install-url` — those are embedded in the initrd.
+- **dnsmasq `dhcp-boot` quoting bug**: Wrapping the HTTP URL in quotes in `dhcp-boot=tag:ipxe,"http://..."` causes dnsmasq to treat it as a TFTP file path. Must be unquoted: `dhcp-boot=tag:ipxe,http://...`
 
