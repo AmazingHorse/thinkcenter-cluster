@@ -185,10 +185,12 @@ else
 
         OUT=/assets/pxe-prepared
         mkdir -p \"\${OUT}\"
-        # --tmp /tmp: keep temp ISO copies out of the assets volume.
+        # --tmp must be on the SAME filesystem as --output to avoid EXDEV (os error 18).
+        # In the container, /assets is a bind mount; /tmp is a separate fs.
+        # Using --tmp ${OUT} keeps everything on the /assets volume.
         # PXE flags: --pxe-loader ipxe / --pxe use --output as a directory.
         # ISO fallback (v8.4.x): --output must be a FILE path.
-        PXE_ARGS=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}' --tmp /tmp)
+        PXE_ARGS=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}' --tmp \"\${OUT}\")
 
         echo '  [prepare-iso] running...'
         if proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe-loader ipxe --output \"\${OUT}\" 2>/dev/null; then
