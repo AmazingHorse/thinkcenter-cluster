@@ -157,7 +157,13 @@ else
   fi
 
   # ── Move outputs into place ───────────────────────────────────────────────
-  if [[ -f "${PREPARED}/vmlinuz" ]]; then
+  # The --pxe-loader flags produce *.pxe-vmlinuz and *.pxe-initrd.
+  # The 7z extraction fallback produces boot/vmlinuz and boot/initrd.img.
+  
+  if ls "${PREPARED}"/*.pxe-vmlinuz >/dev/null 2>&1; then
+    mv "${PREPARED}"/*.pxe-vmlinuz "${ASSETS_DIR}/linux26"
+    echo "  [ok] *.pxe-vmlinuz -> linux26"
+  elif [[ -f "${PREPARED}/vmlinuz" ]]; then
     mv "${PREPARED}/vmlinuz" "${ASSETS_DIR}/linux26"
     echo "  [ok] vmlinuz -> linux26"
   elif [[ -f "${PREPARED}/linux26" ]]; then
@@ -175,7 +181,10 @@ else
     exit 1
   fi
 
-  if [[ -f "${PREPARED}/initrd.img" ]]; then
+  if ls "${PREPARED}"/*.pxe-initrd >/dev/null 2>&1; then
+    mv "${PREPARED}"/*.pxe-initrd "${ASSETS_DIR}/initrd.img"
+    echo "  [ok] *.pxe-initrd -> initrd.img"
+  elif [[ -f "${PREPARED}/initrd.img" ]]; then
     mv "${PREPARED}/initrd.img" "${ASSETS_DIR}/initrd.img"
     echo "  [ok] initrd.img moved"
   elif [[ -f "${PREPARED}/boot/initrd.img" ]]; then
@@ -185,6 +194,12 @@ else
     echo "ERROR: no initrd.img found in ${PREPARED}/" >&2
     ls -lhR "${PREPARED}/" >&2
     exit 1
+  fi
+
+  # Also keep the generated PXE conf so we can inspect the exact kernel arguments
+  if ls "${PREPARED}"/*.pxe-conf >/dev/null 2>&1; then
+    mv "${PREPARED}"/*.pxe-conf "${ASSETS_DIR}/autoexec.pxe-conf"
+    echo "  [ok] *.pxe-conf -> autoexec.pxe-conf"
   fi
 
   rm -rf "${PREPARED}"
