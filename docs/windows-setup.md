@@ -63,9 +63,9 @@ SSH into the VM, then install required prerequisites:
 # Enable community repository
 echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories
 
-# Update package index and install packages (including just command runner)
+# Update package index and install packages (including just command runner & ISO/cpio tools)
 apk update
-apk add git bash curl p7zip docker docker-cli-compose python3 py3-pip py3-yaml py3-netaddr ansible just
+apk add git bash curl p7zip cpio zstd xorriso docker docker-cli-compose python3 py3-pip py3-yaml py3-netaddr ansible just
 
 # Start and enable Docker service
 rc-update add docker boot
@@ -75,7 +75,7 @@ service docker start
 **Debian / Ubuntu:**
 ```bash
 sudo apt update
-sudo apt install -y git bash curl docker.io docker-compose-v2 ansible just
+sudo apt install -y git bash curl p7zip-full cpio zstd xorriso docker.io docker-compose-v2 ansible just
 sudo usermod -aG docker $USER
 ```
 

@@ -108,13 +108,12 @@ url = "http://${BOOT_SERVER_IP}:8080/assets/answers/"
 EOF
     cp -f "${ASSETS_DIR}/${PVE_ISO}" "${ASSETS_DIR}/proxmox.iso"
     if command -v xorriso >/dev/null 2>&1; then
-      xorriso -dev "${ASSETS_DIR}/proxmox.iso" -add "${ASSETS_DIR}/proxmox-auto-installer-mode" /proxmox-auto-installer-mode -- >/dev/null 2>&1
-    elif command -v 7z >/dev/null 2>&1; then
-      (cd "${ASSETS_DIR}" && 7z a "${ASSETS_DIR}/proxmox.iso" proxmox-auto-installer-mode >/dev/null 2>&1)
+      echo "  [iso] adding proxmox-auto-installer-mode to proxmox.iso using xorriso..."
+      xorriso -dev "${ASSETS_DIR}/proxmox.iso" -add "${ASSETS_DIR}/proxmox-auto-installer-mode" /proxmox-auto-installer-mode -- >/dev/null 2>&1 || true
     fi
     if command -v cpio >/dev/null 2>&1 && command -v zstd >/dev/null 2>&1; then
-      (cd "${ASSETS_DIR}" && printf "proxmox.iso\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
-      echo "  [ok] proxmox.iso (with embedded auto-installer mode) appended to initrd.img"
+      (cd "${ASSETS_DIR}" && printf "proxmox.iso\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
+      echo "  [ok] proxmox.iso & proxmox-auto-installer-mode appended to initrd.img"
     else
       echo "  [warn] cpio or zstd not found. Install with: apk add cpio zstd"
     fi
