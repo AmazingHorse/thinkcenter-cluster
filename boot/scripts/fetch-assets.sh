@@ -99,16 +99,22 @@ if [[ ! -f "${ASSETS_DIR}/linux26" || ! -f "${ASSETS_DIR}/initrd.img" ]]; then
     7z x -y "${ASSETS_DIR}/${PVE_ISO}" boot/linux26 boot/initrd.img -o"${ASSETS_DIR}" >/dev/null
     mv "${ASSETS_DIR}/boot/linux26" "${ASSETS_DIR}/linux26"
     mv "${ASSETS_DIR}/boot/initrd.img" "${ASSETS_DIR}/initrd.img"
-    echo "  [pxe] embedding ISO payload & proxmox-auto-installer-mode into initrd.img (fast zstd)..."
+    echo "  [pxe] embedding proxmox-auto-installer-mode into ISO payload..."
     cat <<EOF > "${ASSETS_DIR}/proxmox-auto-installer-mode"
 mode = "http"
 
 [http]
 url = "http://${BOOT_SERVER_IP}:8080/assets/answers/"
 EOF
+    cp -f "${ASSETS_DIR}/${PVE_ISO}" "${ASSETS_DIR}/proxmox.iso"
+    if command -v xorriso >/dev/null 2>&1; then
+      xorriso -dev "${ASSETS_DIR}/proxmox.iso" -add "${ASSETS_DIR}/proxmox-auto-installer-mode" /proxmox-auto-installer-mode -- >/dev/null 2>&1
+    elif command -v 7z >/dev/null 2>&1; then
+      (cd "${ASSETS_DIR}" && 7z a "${ASSETS_DIR}/proxmox.iso" proxmox-auto-installer-mode >/dev/null 2>&1)
+    fi
     if command -v cpio >/dev/null 2>&1 && command -v zstd >/dev/null 2>&1; then
-      (cd "${ASSETS_DIR}" && ln -f "${PVE_ISO}" proxmox.iso && printf "proxmox.iso\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
-      echo "  [ok] proxmox.iso & proxmox-auto-installer-mode appended to initrd.img"
+      (cd "${ASSETS_DIR}" && printf "proxmox.iso\n" | cpio -H newc -o | zstd -1 -T0 >> "initrd.img" && rm -f proxmox.iso proxmox-auto-installer-mode)
+      echo "  [ok] proxmox.iso (with embedded auto-installer mode) appended to initrd.img"
     else
       echo "  [warn] cpio or zstd not found. Install with: apk add cpio zstd"
     fi
