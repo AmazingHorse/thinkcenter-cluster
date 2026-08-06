@@ -92,5 +92,10 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
   - Instead, the ISO must be passed as a **second initrd** named `proxmox.iso`.
   - iPXE supports this natively: `initrd http://<boot_server_ip>:8080/assets/proxmox-prepared.iso proxmox.iso`
   - The kernel boot arguments must also include `ramdisk_size=16777216` (16GB, to hold the uncompressed initramfs) and `proxmox-start-auto-installer`.
+- **UEFI PXE Boot Quirks & Kernel Panics (WIP)**:
+  - In Legacy BIOS mode, iPXE magically wraps secondary initrds into a CPIO archive. In UEFI mode, it passes them raw, causing the Linux EFI stub to silently discard the non-CPIO `.iso` file.
+  - Attempting to pass multiple `initrd=` parameters to the EFI stub triggered a kernel panic (`unable to mount root on unknown block`), likely due to the EFI stub parsing logic overwriting the primary initrd, or memory limits on the boot node (8GB RAM vs 1.6GB ISO unpack).
+  - Attempting to append the ISO (as a CPIO archive) directly onto the end of `initrd.img` to serve a single massive initrd *also* resulted in a kernel panic, possibly due to EFI memory allocation limits or the EFI stub refusing to load a 1.7GB single initrd file.
+  - Next steps: Re-evaluate how Proxmox 8.2+ officially supports UEFI PXE booting. Does `proxmox-auto-installer-mode=http` automatically fetch the ISO if we don't pass it as an initrd, but instead pass a `proxmox-iso-url` kernel parameter? We need to research the exact kernel parameters for Proxmox 9.2 HTTP ISO fetching instead of relying on the RAM disk.
 - **dnsmasq `dhcp-boot` quoting bug**: Wrapping the HTTP URL in quotes in `dhcp-boot=tag:ipxe,"http://..."` causes dnsmasq to treat it as a TFTP file path. Must be unquoted: `dhcp-boot=tag:ipxe,http://...`
 
