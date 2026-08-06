@@ -194,10 +194,14 @@ else
     echo "  [ok] boot.ipxe -> autoexec.ipxe.generated"
   fi
   
-  # Proxmox 9.2.8 generates an ISO file alongside it, we should keep it
+  # Proxmox 9.2.8 generates an ISO file alongside it.
+  # The Linux kernel EFI stub (used in UEFI boot) CANNOT extract raw ISOs passed via initrd=.
+  # It only extracts CPIO archives! So we must wrap the ISO into a CPIO archive.
   if ls "${PREPARED}"/*.iso >/dev/null 2>&1; then
-    mv "${PREPARED}"/*.iso "${ASSETS_DIR}/proxmox-prepared.iso"
-    echo "  [ok] ISO -> proxmox-prepared.iso"
+    echo "  [cpio] Wrapping ISO into a CPIO archive for UEFI PXE compatibility..."
+    mv "${PREPARED}"/*.iso "${PREPARED}/proxmox.iso"
+    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o > "${ASSETS_DIR}/proxmox-iso.cpio" 2>/dev/null)
+    echo "  [ok] ISO -> proxmox-iso.cpio"
   fi
 
   rm -rf "${PREPARED}"
