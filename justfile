@@ -11,8 +11,13 @@ default:
     @just --list
 
 # Fetch Proxmox ISO & iPXE assets if missing or outdated
-fetch:
+fetch: build-tools
     bash boot/scripts/fetch-assets.sh
+
+# Build tool images (prepare-pxe) — runs fast if image is already up to date
+build-tools:
+    docker compose -f boot/docker-compose.yml build prepare-pxe
+
 
 # Wipe extracted kernel assets & generated configs (keeps downloaded ISO intact)
 clean:

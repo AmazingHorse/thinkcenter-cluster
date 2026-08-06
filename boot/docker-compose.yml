@@ -1,4 +1,4 @@
-# Boot server stack — nginx + dnsmasq
+# Boot server stack — nginx + dnsmasq + prepare-pxe (build tool)
 #
 # Run on a Linux host (or Hyper-V VM with External Switch on Windows).
 # Requires network_mode: host so dnsmasq can broadcast DHCP on the physical LAN.
@@ -32,3 +32,16 @@ services:
     #   DHCP with static leases (MAC → IP)
     #   TFTP root for iPXE binary
     #   PXE option 66/67 pointing at matchbox HTTP
+
+  # One-shot build tool — NOT started by `just up` / `docker compose up`.
+  # Usage: docker compose -f boot/docker-compose.yml run --rm prepare-pxe \
+  #            /assets/<iso> <answer_url> /assets/pxe-prepared
+  # Called automatically by fetch-assets.sh when proxmox-auto-install-assistant
+  # is not found on the host PATH.
+  prepare-pxe:
+    build:
+      context: ./prepare-pxe
+      dockerfile: Dockerfile
+    profiles: [tools]
+    volumes:
+      - ./assets:/assets

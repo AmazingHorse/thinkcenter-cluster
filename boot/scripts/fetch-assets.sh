@@ -6,40 +6,35 @@
 # Boot server OS support:
 #   Debian/Ubuntu/Proxmox host: install proxmox-auto-install-assistant natively
 #     (apt install proxmox-auto-install-assistant) — no Docker needed.
-#   Alpine or any other host: this script uses a debian:bookworm Docker
-#     container automatically when the binary is not found on PATH.
+#   Alpine or any other host: uses the `prepare-pxe` Docker Compose service
+#     (boot/prepare-pxe/Dockerfile) which has the tool pre-installed.
+#     Run `docker compose build prepare-pxe` once before first use.
 #
 # Requires: curl, sha256sum
 # Native Debian: also needs proxmox-auto-install-assistant (apt install it)
-# Alpine/other:  also needs docker + p7zip
+# Alpine/other:  also needs docker
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANIFEST_FILE="${SCRIPT_DIR}/../../cluster-manifest.yml"
+REPO_ROOT="$(realpath "${SCRIPT_DIR}/../..")"
+MANIFEST_FILE="${REPO_ROOT}/cluster-manifest.yml"
 ASSETS_DIR="${SCRIPT_DIR}/../assets"
+COMPOSE_FILE="${SCRIPT_DIR}/../docker-compose.yml"
 mkdir -p "${ASSETS_DIR}"
 
 # ── Parse manifest ────────────────────────────────────────────────────────────
 if [[ ! -f "${MANIFEST_FILE}" ]]; then
   echo "ERROR: Manifest file not found at ${MANIFEST_FILE}" >&2
-  echo "Please create cluster-manifest.yml at repo root before running fetch-assets.sh." >&2
   exit 1
 fi
 
-PVE_VERSION=$(grep 'pve_version:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
-PVE_SHA256=$(grep 'pve_iso_sha256:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+PVE_VERSION=$(grep 'pve_version:'    "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+PVE_SHA256=$(grep  'pve_iso_sha256:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
 BOOT_SERVER_IP=$(grep 'boot_server_ip:' "${MANIFEST_FILE}" | head -n1 | awk '{print $2}' | tr -d '"' | tr -d "'")
 
-if [[ -z "${PVE_VERSION}" ]]; then
-  echo "ERROR: pve_version not found in ${MANIFEST_FILE}" >&2
-  exit 1
-fi
-
-if [[ -z "${BOOT_SERVER_IP}" ]]; then
-  echo "ERROR: boot_server_ip not found in ${MANIFEST_FILE}" >&2
-  exit 1
-fi
+[[ -z "${PVE_VERSION}" ]]     && { echo "ERROR: pve_version not found in ${MANIFEST_FILE}" >&2; exit 1; }
+[[ -z "${BOOT_SERVER_IP}" ]]  && { echo "ERROR: boot_server_ip not found in ${MANIFEST_FILE}" >&2; exit 1; }
 
 PVE_ISO="proxmox-ve_${PVE_VERSION}-1.iso"
 PVE_URL="https://enterprise.proxmox.com/iso/${PVE_ISO}"
@@ -64,13 +59,12 @@ fetch_if_missing() {
 verify_sha256() {
   local file="$1" expected="$2"
   if [[ "${expected}" == "REPLACE_WITH_OFFICIAL_SHA256" || -z "${expected}" ]]; then
-    echo "  [warn] SHA256 not configured in cluster-manifest.yml — skipping verification for $(basename "${file}")"
+    echo "  [warn] SHA256 not configured — skipping verification for $(basename "${file}")"
     return 0
   fi
   echo "  [verify] $(basename "${file}")"
   if echo "${expected}  ${file}" | sha256sum -c > /dev/null 2>&1; then
     echo "  [ok] checksum verified"
-    return 0
   else
     echo "  [fail] checksum mismatch for $(basename "${file}")"
     return 1
@@ -84,15 +78,36 @@ fetch_and_verify_iso() {
       echo "  [skip] $(basename "${dest}") already present and verified"
       return 0
     else
-      echo "  [clean] removing corrupted/partial file $(basename "${dest}")"
-      rm -f "${dest}"
-      rm -f "${ASSETS_DIR}/linux26" "${ASSETS_DIR}/initrd.img"
+      echo "  [clean] removing corrupted/partial $(basename "${dest}")"
+      rm -f "${dest}" "${ASSETS_DIR}/linux26" "${ASSETS_DIR}/initrd.img"
     fi
   fi
-
   echo "  [fetch] downloading $(basename "${dest}")"
   curl -fL --progress-bar -C - -o "${dest}" "${url}" || curl -fL --progress-bar -o "${dest}" "${url}"
   verify_sha256 "${dest}" "${expected_sha}"
+}
+
+# run_prepare_iso <binary> <iso> <answer_url> <outdir>
+# Tries --pxe-loader ipxe → --pxe → ISO-only + 7z extraction.
+# --tmp is set to <outdir> so temp files stay on the same filesystem as output.
+run_prepare_iso() {
+  local binary="$1" iso="$2" url="$3" out="$4"
+  local base=(prepare-iso "${iso}" --fetch-from http --url "${url}" --tmp "${out}")
+
+  if "${binary}" "${base[@]}" --pxe-loader ipxe --output "${out}" 2>/dev/null; then
+    echo "  [ok] prepared with --pxe-loader ipxe"
+  elif "${binary}" "${base[@]}" --pxe --output "${out}" 2>/dev/null; then
+    echo "  [ok] prepared with --pxe"
+  else
+    echo "  [warn] PXE flags unsupported (v8.4.x); preparing modified ISO + extracting via 7z"
+    echo "  [note] functionally identical: prepared initrd has HTTP fetch logic embedded"
+    local prepared_iso="${out}/proxmox-prepared.iso"
+    "${binary}" "${base[@]}" --output "${prepared_iso}"
+    [[ -f "${prepared_iso}" ]] || { echo "ERROR: prepare-iso did not produce ${prepared_iso}" >&2; return 1; }
+    echo "  [extract] extracting boot/ from ${prepared_iso}"
+    7z x -y "${prepared_iso}" boot/vmlinuz boot/linux26 boot/initrd.img -o"${out}" > /dev/null 2>&1 || true
+    rm -f "${prepared_iso}"
+  fi
 }
 
 # ── Fetch ISO ─────────────────────────────────────────────────────────────────
@@ -104,111 +119,38 @@ fetch_if_missing "${IPXE_URL}"     "${ASSETS_DIR}/undionly.kpxe"
 fetch_if_missing "${IPXE_EFI_URL}" "${ASSETS_DIR}/ipxe.efi"
 fetch_if_missing "${IPXE_SNP_URL}" "${ASSETS_DIR}/snponly.efi"
 
-# ── Prepare PXE kernel + initrd via proxmox-auto-install-assistant ────────────
-# The stock ISO's initrd.img does NOT support HTTP answer fetching.
-# proxmox-auto-install-assistant prepare-iso embeds the fetch-from-http logic.
+# ── Prepare PXE kernel + initrd ───────────────────────────────────────────────
+# proxmox-auto-install-assistant embeds HTTP answer-fetch logic into the initrd.
+# The stock initrd from the ISO does NOT support HTTP fetching.
 #
-# PXE output: tool tries --pxe-loader ipxe (≥some version) then --pxe.
-# If neither is supported, it falls back to producing a modified ISO and
-# extracting boot/vmlinuz + boot/initrd.img from it via 7z.
-#
-# On Debian/Ubuntu/Proxmox: install natively (no Docker):
-#   echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
-#     > /etc/apt/sources.list.d/pve.list
-#   curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
-#     -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg
-#   apt update && apt install proxmox-auto-install-assistant
-# On Alpine/other: this script uses a debian:bookworm Docker container.
+# Native path: if proxmox-auto-install-assistant is on PATH, run it directly.
+# Container path: use the `prepare-pxe` Compose service (boot/prepare-pxe/).
+#   Build once with: docker compose -f boot/docker-compose.yml build prepare-pxe
 echo "==> Preparing PXE kernel + initrd via proxmox-auto-install-assistant"
 
 if [[ -f "${ASSETS_DIR}/linux26" && -f "${ASSETS_DIR}/initrd.img" ]]; then
   echo "  [skip] linux26 and initrd.img already present (delete to re-prepare)"
 else
   echo "  [info] answer URL baked in: ${ANSWER_URL}"
-
-  HOST_ASSETS="$(realpath "${ASSETS_DIR}")"
   PREPARED="${ASSETS_DIR}/pxe-prepared"
   mkdir -p "${PREPARED}"
 
-  run_prepare_iso() {
-    local binary="$1" iso="$2" url="$3" out="$4"
-    local base_args=(prepare-iso "${iso}" --fetch-from http --url "${url}" --tmp /tmp)
-
-    if "${binary}" "${base_args[@]}" --pxe-loader ipxe --output "${out}" 2>/dev/null; then
-      echo "  [ok] prepared with --pxe-loader ipxe"
-    elif "${binary}" "${base_args[@]}" --pxe --output "${out}" 2>/dev/null; then
-      echo "  [ok] prepared with --pxe"
-    else
-      # Neither PXE flag accepted — prepare modified ISO (--output must be a FILE),
-      # then extract boot/vmlinuz + boot/initrd.img from it via 7z.
-      echo "  [warn] --pxe-loader/--pxe unsupported (v8.4.x); preparing ISO + extracting via 7z"
-      echo "  [note] functionally identical: prepared initrd has HTTP fetch logic embedded"
-      local prepared_iso="${out}/proxmox-prepared.iso"
-      "${binary}" "${base_args[@]}" --output "${prepared_iso}"
-      if [[ ! -f "${prepared_iso}" ]]; then
-        echo "ERROR: prepare-iso did not produce ${prepared_iso}" >&2
-        return 1
-      fi
-      echo "  [extract] extracting boot/ files from ${prepared_iso}"
-      7z x -y "${prepared_iso}" boot/vmlinuz boot/linux26 boot/initrd.img -o"${out}" > /dev/null 2>&1 || true
-      rm -f "${prepared_iso}"
-    fi
-  }
-
   if command -v proxmox-auto-install-assistant > /dev/null 2>&1; then
     # ── Native path (Debian/Ubuntu/Proxmox boot server) ──────────────────────
-    echo "  [native] proxmox-auto-install-assistant found on PATH — running natively"
+    echo "  [native] proxmox-auto-install-assistant found on PATH"
     run_prepare_iso proxmox-auto-install-assistant \
       "${ASSETS_DIR}/${PVE_ISO}" "${ANSWER_URL}" "${PREPARED}"
 
   else
-    # ── Container fallback (Alpine or any host without the binary) ────────────
-    echo "  [container] proxmox-auto-install-assistant not found — using debian:bookworm"
-    echo "  [tip] On Debian/Ubuntu, install natively to skip this container step:"
+    # ── Compose service (Alpine or any host without the binary) ───────────────
+    echo "  [compose] using prepare-pxe service (boot/prepare-pxe/)"
+    echo "  [tip] On Debian/Ubuntu, install natively to skip Docker:"
     echo "        apt install proxmox-auto-install-assistant (Proxmox no-sub repo)"
 
-    docker run --rm \
-      -v "${HOST_ASSETS}:/assets" \
-      -e DEBIAN_FRONTEND=noninteractive \
-      debian:bookworm \
-      bash -c "
-        set -euo pipefail
-        apt-get update -qq
-        apt-get install -y -qq curl xorriso ca-certificates gnupg p7zip-full 2>/dev/null
-
-        curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
-          -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg
-        echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
-          > /etc/apt/sources.list.d/pve.list
-        apt-get update -qq
-        apt-get install -y -qq proxmox-auto-install-assistant 2>/dev/null
-
-        OUT=/assets/pxe-prepared
-        mkdir -p \"\${OUT}\"
-        # --tmp must be on the SAME filesystem as --output to avoid EXDEV (os error 18).
-        # In the container, /assets is a bind mount; /tmp is a separate fs.
-        # Using --tmp ${OUT} keeps everything on the /assets volume.
-        # PXE flags: --pxe-loader ipxe / --pxe use --output as a directory.
-        # ISO fallback (v8.4.x): --output must be a FILE path.
-        PXE_ARGS=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}' --tmp \"\${OUT}\")
-
-        echo '  [prepare-iso] running...'
-        if proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe-loader ipxe --output \"\${OUT}\" 2>/dev/null; then
-          echo '  [ok] --pxe-loader ipxe'
-        elif proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe --output \"\${OUT}\" 2>/dev/null; then
-          echo '  [ok] --pxe'
-        else
-          echo '  [warn] PXE flags unsupported (v8.4.x); preparing ISO (--output as file) + extracting via 7z'
-          echo '  [note] functionally identical: prepared initrd has HTTP fetch logic embedded'
-          PREPARED_ISO=\"\${OUT}/proxmox-prepared.iso\"
-          proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --output \"\${PREPARED_ISO}\"
-          7z x -y \"\${PREPARED_ISO}\" boot/vmlinuz boot/linux26 boot/initrd.img -o\"\${OUT}\" > /dev/null 2>&1 || true
-          rm -f \"\${PREPARED_ISO}\"
-        fi
-
-        echo '  [done]'
-        ls -lh \"\${OUT}/\"
-      "
+    docker compose -f "${COMPOSE_FILE}" run --rm prepare-pxe \
+      "/assets/${PVE_ISO}" \
+      "${ANSWER_URL}" \
+      "/assets/pxe-prepared"
   fi
 
   # ── Move outputs into place ───────────────────────────────────────────────
