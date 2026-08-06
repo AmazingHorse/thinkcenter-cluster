@@ -88,27 +88,30 @@ fetch_and_verify_iso() {
 }
 
 # run_prepare_iso <binary> <iso> <answer_url> <outdir>
-# Tries --pxe-loader ipxe → --pxe → ISO-only + 7z extraction.
-# --tmp is set to <outdir> so temp files stay on the same filesystem as output.
+# Requires a proxmox-auto-install-assistant that supports --pxe-loader ipxe.
+# This flag produces a self-contained PXE initrd (~1.7 GB) with the full
+# installer squashfs embedded — no local block device needed at boot time.
+# Versions from pve-no-subscription (≤ 8.4.6) do NOT support this flag.
 run_prepare_iso() {
   local binary="$1" iso="$2" url="$3" out="$4"
   local base=(prepare-iso "${iso}" --fetch-from http --url "${url}" --tmp "${out}")
 
   if "${binary}" "${base[@]}" --pxe-loader ipxe --output "${out}" 2>/dev/null; then
-    echo "  [ok] prepared with --pxe-loader ipxe"
+    echo "  [ok] prepared with --pxe-loader ipxe (self-contained PXE initrd)"
   elif "${binary}" "${base[@]}" --pxe --output "${out}" 2>/dev/null; then
-    echo "  [ok] prepared with --pxe"
+    echo "  [ok] prepared with --pxe (self-contained PXE initrd)"
   else
-    echo "  [warn] PXE flags unsupported (v8.4.x); preparing modified ISO + extracting via 7z"
-    echo "  [note] functionally identical: prepared initrd has HTTP fetch logic embedded"
-    local prepared_iso="${out}/proxmox-prepared.iso"
-    "${binary}" "${base[@]}" --output "${prepared_iso}"
-    [[ -f "${prepared_iso}" ]] || { echo "ERROR: prepare-iso did not produce ${prepared_iso}" >&2; return 1; }
-    echo "  [extract] extracting boot/ from ${prepared_iso}"
-    7z x -y "${prepared_iso}" boot/vmlinuz boot/linux26 boot/initrd.img -o"${out}" > /dev/null 2>&1 || true
-    rm -f "${prepared_iso}"
+    echo "ERROR: proxmox-auto-install-assistant does not support --pxe-loader or --pxe" >&2
+    echo "       This version cannot produce a self-contained PXE initrd." >&2
+    echo "       PXE boot will fail with 'ISO not found on block device'." >&2
+    echo "       Install from pvetest repo to get a supported version:" >&2
+    echo "         echo 'deb http://download.proxmox.com/debian/pve bookworm pvetest'" >&2
+    echo "           > /etc/apt/sources.list.d/pve.list" >&2
+    echo "         apt update && apt install proxmox-auto-install-assistant" >&2
+    return 1
   fi
 }
+
 
 # ── Fetch ISO ─────────────────────────────────────────────────────────────────
 echo "==> Fetching Proxmox VE ISO (${PVE_ISO})"
