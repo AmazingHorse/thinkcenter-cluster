@@ -130,23 +130,21 @@ else
   PREPARED="${ASSETS_DIR}/pxe-prepared"
   mkdir -p "${PREPARED}"
 
-  # run_prepare_iso <binary> <iso> <url> <outdir>
-  # Tries --pxe-loader ipxe, then --pxe, then ISO-only + 7z extraction.
   run_prepare_iso() {
     local binary="$1" iso="$2" url="$3" out="$4"
-    local base_args=(prepare-iso "${iso}" --fetch-from http --url "${url}" --output "${out}")
+    local base_args=(prepare-iso "${iso}" --fetch-from http --url "${url}" --tmp /tmp)
 
-    if "${binary}" "${base_args[@]}" --pxe-loader ipxe 2>/dev/null; then
+    if "${binary}" "${base_args[@]}" --pxe-loader ipxe --output "${out}" 2>/dev/null; then
       echo "  [ok] prepared with --pxe-loader ipxe"
-    elif "${binary}" "${base_args[@]}" --pxe 2>/dev/null; then
+    elif "${binary}" "${base_args[@]}" --pxe --output "${out}" 2>/dev/null; then
       echo "  [ok] prepared with --pxe"
     else
       # Neither PXE flag accepted — prepare modified ISO (--output must be a FILE),
       # then extract boot/vmlinuz + boot/initrd.img from it via 7z.
-      echo "  [warn] --pxe-loader/--pxe unsupported; preparing ISO + extracting via 7z"
+      echo "  [warn] --pxe-loader/--pxe unsupported (v8.4.x); preparing ISO + extracting via 7z"
+      echo "  [note] functionally identical: prepared initrd has HTTP fetch logic embedded"
       local prepared_iso="${out}/proxmox-prepared.iso"
-      local iso_args=(prepare-iso "${iso}" --fetch-from http --url "${url}" --output "${prepared_iso}")
-      "${binary}" "${iso_args[@]}"
+      "${binary}" "${base_args[@]}" --output "${prepared_iso}"
       if [[ ! -f "${prepared_iso}" ]]; then
         echo "ERROR: prepare-iso did not produce ${prepared_iso}" >&2
         return 1
@@ -187,9 +185,10 @@ else
 
         OUT=/assets/pxe-prepared
         mkdir -p \"\${OUT}\"
-        # PXE flags: --pxe-loader ipxe and --pxe both use --output as a directory.
-        # ISO fallback: --output must be a FILE path.
-        PXE_ARGS=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}')
+        # --tmp /tmp: keep temp ISO copies out of the assets volume.
+        # PXE flags: --pxe-loader ipxe / --pxe use --output as a directory.
+        # ISO fallback (v8.4.x): --output must be a FILE path.
+        PXE_ARGS=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}' --tmp /tmp)
 
         echo '  [prepare-iso] running...'
         if proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe-loader ipxe --output \"\${OUT}\" 2>/dev/null; then
@@ -197,7 +196,8 @@ else
         elif proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe --output \"\${OUT}\" 2>/dev/null; then
           echo '  [ok] --pxe'
         else
-          echo '  [warn] PXE flags unsupported; preparing ISO (--output as file) + extracting via 7z'
+          echo '  [warn] PXE flags unsupported (v8.4.x); preparing ISO (--output as file) + extracting via 7z'
+          echo '  [note] functionally identical: prepared initrd has HTTP fetch logic embedded'
           PREPARED_ISO=\"\${OUT}/proxmox-prepared.iso\"
           proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --output \"\${PREPARED_ISO}\"
           7z x -y \"\${PREPARED_ISO}\" boot/vmlinuz boot/linux26 boot/initrd.img -o\"\${OUT}\" > /dev/null 2>&1 || true
