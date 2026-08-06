@@ -202,6 +202,10 @@ else
     mv "${PREPARED}"/*.iso "${PREPARED}/proxmox.iso"
     (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o > "${ASSETS_DIR}/proxmox-iso.cpio")
     echo "  [ok] ISO -> proxmox-iso.cpio"
+    
+    echo "  [cpio] Combining initrd.img and proxmox-iso.cpio into a single UEFI-compatible initrd..."
+    cat "${ASSETS_DIR}/initrd.img" "${ASSETS_DIR}/proxmox-iso.cpio" > "${ASSETS_DIR}/combined-initrd.img"
+    echo "  [ok] combined-initrd.img ready"
   fi
 
   rm -rf "${PREPARED}"
