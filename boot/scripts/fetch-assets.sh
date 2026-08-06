@@ -198,14 +198,10 @@ else
   # The Linux kernel EFI stub (used in UEFI boot) CANNOT extract raw ISOs passed via initrd=.
   # It only extracts CPIO archives! So we must wrap the ISO into a CPIO archive.
   if ls "${PREPARED}"/*.iso >/dev/null 2>&1; then
-    echo "  [cpio] Wrapping ISO into a CPIO archive for UEFI PXE compatibility..."
+    echo "  [cpio] Appending ISO as CPIO archive directly to initrd.img to save disk space..."
     mv "${PREPARED}"/*.iso "${PREPARED}/proxmox.iso"
-    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o > "${ASSETS_DIR}/proxmox-iso.cpio")
-    echo "  [ok] ISO -> proxmox-iso.cpio"
-    
-    echo "  [cpio] Combining initrd.img and proxmox-iso.cpio into a single UEFI-compatible initrd..."
-    cat "${ASSETS_DIR}/initrd.img" "${ASSETS_DIR}/proxmox-iso.cpio" > "${ASSETS_DIR}/combined-initrd.img"
-    echo "  [ok] combined-initrd.img ready"
+    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o >> "${ASSETS_DIR}/initrd.img")
+    echo "  [ok] ISO successfully packed into initrd.img"
   fi
 
   rm -rf "${PREPARED}"

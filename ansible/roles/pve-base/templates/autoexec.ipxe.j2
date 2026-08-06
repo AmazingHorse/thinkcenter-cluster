@@ -1,7 +1,7 @@
 #!ipxe
 echo Booting Proxmox VE automated installer over HTTP...
-kernel http://{{ cluster.boot_server_ip }}:8080/assets/linux26 initrd=combined-initrd.img ramdisk_size=16777216 vga=788 ip=any:dhcp quiet proxmox-start-auto-installer || goto failed
-initrd http://{{ cluster.boot_server_ip }}:8080/assets/combined-initrd.img combined-initrd.img || goto failed
+kernel http://{{ cluster.boot_server_ip }}:8080/assets/linux26 initrd=initrd.img ramdisk_size=16777216 vga=788 ip=any:dhcp quiet proxmox-start-auto-installer || goto failed
+initrd http://{{ cluster.boot_server_ip }}:8080/assets/initrd.img initrd.img || goto failed
 boot || goto failed
 
 :failed
