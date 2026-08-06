@@ -141,17 +141,19 @@ else
     elif "${binary}" "${base_args[@]}" --pxe 2>/dev/null; then
       echo "  [ok] prepared with --pxe"
     else
-      # Neither PXE flag accepted — prepare modified ISO, extract via 7z
+      # Neither PXE flag accepted — prepare modified ISO (--output must be a FILE),
+      # then extract boot/vmlinuz + boot/initrd.img from it via 7z.
       echo "  [warn] --pxe-loader/--pxe unsupported; preparing ISO + extracting via 7z"
-      "${binary}" "${base_args[@]}"
-      local found_iso
-      found_iso=$(find "${out}" -name "*.iso" | head -n1)
-      if [[ -z "${found_iso}" ]]; then
-        echo "ERROR: prepare-iso did not produce an ISO in ${out}" >&2
+      local prepared_iso="${out}/proxmox-prepared.iso"
+      local iso_args=(prepare-iso "${iso}" --fetch-from http --url "${url}" --output "${prepared_iso}")
+      "${binary}" "${iso_args[@]}"
+      if [[ ! -f "${prepared_iso}" ]]; then
+        echo "ERROR: prepare-iso did not produce ${prepared_iso}" >&2
         return 1
       fi
-      echo "  [extract] extracting boot/ files from ${found_iso}"
-      7z x -y "${found_iso}" boot/vmlinuz boot/linux26 boot/initrd.img -o"${out}" > /dev/null 2>&1 || true
+      echo "  [extract] extracting boot/ files from ${prepared_iso}"
+      7z x -y "${prepared_iso}" boot/vmlinuz boot/linux26 boot/initrd.img -o"${out}" > /dev/null 2>&1 || true
+      rm -f "${prepared_iso}"
     fi
   }
 
@@ -169,6 +171,7 @@ else
 
     docker run --rm \
       -v "${HOST_ASSETS}:/assets" \
+      -e DEBIAN_FRONTEND=noninteractive \
       debian:bookworm \
       bash -c "
         set -euo pipefail
@@ -183,18 +186,22 @@ else
         apt-get install -y -qq proxmox-auto-install-assistant 2>/dev/null
 
         OUT=/assets/pxe-prepared
-        BASE=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}' --output \"\${OUT}\")
+        mkdir -p \"\${OUT}\"
+        # PXE flags: --pxe-loader ipxe and --pxe both use --output as a directory.
+        # ISO fallback: --output must be a FILE path.
+        PXE_ARGS=(prepare-iso /assets/${PVE_ISO} --fetch-from http --url '${ANSWER_URL}')
 
         echo '  [prepare-iso] running...'
-        if proxmox-auto-install-assistant \"\${BASE[@]}\" --pxe-loader ipxe 2>/dev/null; then
+        if proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe-loader ipxe --output \"\${OUT}\" 2>/dev/null; then
           echo '  [ok] --pxe-loader ipxe'
-        elif proxmox-auto-install-assistant \"\${BASE[@]}\" --pxe 2>/dev/null; then
+        elif proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --pxe --output \"\${OUT}\" 2>/dev/null; then
           echo '  [ok] --pxe'
         else
-          echo '  [warn] PXE flags unsupported; preparing ISO + extracting via 7z'
-          proxmox-auto-install-assistant \"\${BASE[@]}\"
-          FOUND=\$(find \"\${OUT}\" -name '*.iso' | head -n1)
-          7z x -y \"\${FOUND}\" boot/vmlinuz boot/linux26 boot/initrd.img -o\"\${OUT}\" > /dev/null 2>&1 || true
+          echo '  [warn] PXE flags unsupported; preparing ISO (--output as file) + extracting via 7z'
+          PREPARED_ISO=\"\${OUT}/proxmox-prepared.iso\"
+          proxmox-auto-install-assistant \"\${PXE_ARGS[@]}\" --output \"\${PREPARED_ISO}\"
+          7z x -y \"\${PREPARED_ISO}\" boot/vmlinuz boot/linux26 boot/initrd.img -o\"\${OUT}\" > /dev/null 2>&1 || true
+          rm -f \"\${PREPARED_ISO}\"
         fi
 
         echo '  [done]'
