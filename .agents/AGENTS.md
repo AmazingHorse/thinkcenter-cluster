@@ -86,7 +86,11 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 - **CRITICAL: Stock initrd.img does NOT support HTTP answer fetching**:
   - The `initrd.img` extracted directly from the Proxmox ISO is a **stock** installer ramdisk. It does not parse `proxmox-auto-installer-mode=http` kernel cmdline params.
   - HTTP answer fetching (`proxmox-fetch-answer`) is only enabled when the ISO/initrd has been prepared by `proxmox-auto-install-assistant prepare-iso --fetch-from http`.
-  - `fetch-assets.sh` now runs `proxmox-auto-install-assistant` inside a `debian:bookworm` Docker container to produce the prepared `vmlinuz` (→ `linux26`) + `initrd.img` pair. The answer URL (`http://<boot_server_ip>:8080/assets/answers/`) is baked in at prepare time.
-  - `autoexec.ipxe.j2` no longer passes `proxmox-auto-installer-mode` or `proxmox-auto-install-url` — those are embedded in the initrd.
+  - `fetch-assets.sh` now runs `proxmox-auto-install-assistant` inside a `debian:trixie` Docker container to produce the prepared `vmlinuz` (→ `linux26`), `initrd.img`, and a custom `proxmox-prepared.iso`.
+- **Proxmox 9.2.8 ISO Fetching**:
+  - `proxmox-auto-install-assistant --pxe` does NOT embed the 1.6GB squashfs into the `initrd.img` (it remains 110MB).
+  - Instead, the ISO must be passed as a **second initrd** named `proxmox.iso`.
+  - iPXE supports this natively: `initrd http://<boot_server_ip>:8080/assets/proxmox-prepared.iso proxmox.iso`
+  - The kernel boot arguments must also include `ramdisk_size=16777216` (16GB, to hold the uncompressed initramfs) and `proxmox-start-auto-installer`.
 - **dnsmasq `dhcp-boot` quoting bug**: Wrapping the HTTP URL in quotes in `dhcp-boot=tag:ipxe,"http://..."` causes dnsmasq to treat it as a TFTP file path. Must be unquoted: `dhcp-boot=tag:ipxe,http://...`
 
