@@ -73,6 +73,7 @@ USB NIC **must** be in the same physical USB port on every node (runbook enforce
 
 <!-- Agents: use this section for temporary working notes during tasks -->
 
+- **Agent Tool Execution**: Do NOT run commands locally or execute `just` targets on the host when testing or troubleshooting the PXE bootstack. Provide the exact commands to the user instead. The agent may not have the right context or permissions to test the live Hyper-V/networking environment directly.
 - **Command Runner**: Root [`justfile`](../justfile) added. Run `just standup` to idempotently fetch assets, render manifest boot configs, and launch containers.
 - **Hyper-V Static MAC**: Hyper-V VM adapter requires **Static MAC** in Advanced Features to prevent dynamic MAC reassignment & router DHCP IP drift on VM restart.
 - **PXE Netboot Status & Resolved Issues**:

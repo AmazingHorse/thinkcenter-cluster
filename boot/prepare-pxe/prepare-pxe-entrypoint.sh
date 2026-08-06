@@ -33,10 +33,10 @@ BASE_ARGS=(prepare-iso "${ISO}" --fetch-from http --url "${ANSWER_URL}" --tmp "$
 echo "  [prepare-iso] running proxmox-auto-install-assistant..."
 proxmox-auto-install-assistant --version
 
-if proxmox-auto-install-assistant "${BASE_ARGS[@]}" --pxe-loader ipxe --output "${OUT}" 2>/dev/null; then
+if proxmox-auto-install-assistant "${BASE_ARGS[@]}" --pxe-loader ipxe --output "${OUT}"; then
   echo "  [ok] --pxe-loader ipxe (self-contained PXE initrd)"
 
-elif proxmox-auto-install-assistant "${BASE_ARGS[@]}" --pxe --output "${OUT}" 2>/dev/null; then
+elif proxmox-auto-install-assistant "${BASE_ARGS[@]}" --pxe --output "${OUT}"; then
   echo "  [ok] --pxe (self-contained PXE initrd)"
 
 else
