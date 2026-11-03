@@ -48,10 +48,11 @@ Hostname and network config same as before.
 After install boots, run Ansible:
 
 ```bash
-ansible-playbook playbooks/01-bootstrap.yml --limit <node>
-ansible-playbook playbooks/02-proxmox-base.yml --limit <node>
-ansible-playbook playbooks/03-network.yml --limit <node>
-ansible-playbook playbooks/05-cluster-init.yml --limit <node> \
+# All live Ansible invocations run under fnox exec so secrets resolve from Bitwarden
+fnox exec -- ansible-playbook playbooks/01-bootstrap.yml --limit <node>
+fnox exec -- ansible-playbook playbooks/02-proxmox-base.yml --limit <node>
+fnox exec -- ansible-playbook playbooks/03-network.yml --limit <node>
+fnox exec -- ansible-playbook playbooks/05-cluster-init.yml --limit <node> \
   -e cluster_action=join
 ```
 
@@ -69,8 +70,9 @@ ceph_osd_partition: "/dev/sda" # same as disk for whole-disk OSD
 Run storage and Ceph roles:
 
 ```bash
-ansible-playbook playbooks/04-storage.yml --limit <node>
-ansible-playbook playbooks/07-ceph.yml --limit <node> -e ceph_action=add_osd
+# Storage role + Ceph OSD creation (secrets via fnox)
+fnox exec -- ansible-playbook playbooks/04-storage.yml --limit <node>
+fnox exec -- ansible-playbook playbooks/07-ceph.yml --limit <node> -e ceph_action=add_osd
 ```
 
 ### 6 — Re-arm HA

@@ -76,7 +76,7 @@ pve01   pve02   pve03
 ### Enabling on this cluster
 
 1. Set `pve_sdn_enabled: true` in `group_vars/all.yml`
-2. Run `ansible-playbook playbooks/02-proxmox-base.yml` — enables and configures `frr`
+2. Run `fnox exec -- ansible-playbook playbooks/02-proxmox-base.yml` — enables and configures `frr`
 3. Configure BGP peering in Proxmox web UI: **Datacenter → SDN → Controllers → Add → EVPN**
 4. Configure matching BGP peering on the Mikrotik
 

@@ -1,7 +1,7 @@
 # Architecture & Design
 
 Reference for the cluster's architecture, decisions, and network design.
-For agent context, see [`.agents/AGENTS.md`](../.agents/AGENTS.md).
+For agent context, see [`.agents/project.md`](../.agents/project.md) and the ADRs in `docs/adr/`.
 
 ---
 
@@ -85,15 +85,15 @@ Migration: see [`docs/storage-migration.md`](storage-migration.md).
 | Cluster routing | OSPF (frr) | Runs on eth-cluster-a/b; self-healing |
 | Shared storage | Ceph Tentacle 20.2.x | via `pveceph`; 3-replica pool |
 | VM networking | vmbr0 → SDN (Phase 3) | `vm_bridge` var abstracts the name |
-| Secrets | SOPS + age | `.sops.yaml` has public key; private key local-only |
+| Secrets | `fnox` + Bitwarden (`rbw`) | Declared in `fnox.toml`; resolved by `fnox exec` |
 
 ---
 
 ## Key Design Principles
 
-1. **Single source of truth**: `group_vars/all.yml` owns version pins and cluster-wide
-   defaults; `host_vars/` owns per-node hardware including peer link assignments;
-   `boot/matchbox/` references these through the inventory.
+1. **Single source of truth**: `cluster-manifest.yml` owns all node identities (MACs, IPs,
+   hardware) and `group_vars/all.yml` owns version pins; `host_vars/` is rendered from the
+   manifest by `ansible/playbooks/00-generate-boot-config.yml`.
 2. **Variable-gated phases**: VLAN, SDN, and Corosync ring features are vars, not code
    branches. Activating them doesn't require role rewrites.
 3. **Storage profile abstraction**: `storage_profile` var drives all disk layout decisions in
