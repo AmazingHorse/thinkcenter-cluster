@@ -245,6 +245,3 @@ Get-VMSwitch | Select-Object Name, SwitchType, NetAdapterInterfaceDescription
   1. Create an Internal Switch: `New-VMSwitch -Name "ClusterBridge" -SwitchType Internal`
   2. Open `ncpa.cpl`
   3. Select both `Ethernet 2` and `vEthernet (ClusterBridge)` -> Right-click -> **Bridge Connections**
-
-
-

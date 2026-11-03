@@ -196,4 +196,3 @@ iperf3 -s
 iperf3 -c 10.10.12.2 -t 60 -i 5
 ```
 Watch `dmesg` or `ethtool -S eth-cluster-b` in a separate terminal during the test.
-

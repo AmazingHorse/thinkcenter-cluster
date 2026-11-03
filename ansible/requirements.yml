@@ -1,0 +1,5 @@
+---
+# Add collections only when needed, with exact version pins. Installing them is
+# an explicit setup step, never part of just check.
+collections: []
+roles: []

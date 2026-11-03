@@ -5,7 +5,7 @@ FROM debian:trixie-slim
 # PXE kernel + initrd from the Proxmox VE ISO.
 #
 # We use Debian Trixie (13) which corresponds to Proxmox VE 9.x.
-# This gives us a proxmox-auto-install-assistant version (9.2+) that 
+# This gives us a proxmox-auto-install-assistant version (9.2+) that
 # natively supports the --pxe-loader ipxe flag.
 #
 # Build once; rebuild when the image is stale or PVE version changes.

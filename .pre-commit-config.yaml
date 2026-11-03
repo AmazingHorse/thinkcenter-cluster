@@ -1,0 +1,31 @@
+# All hooks use mise-installed binaries: checks never build/download environments.
+repos:
+  - repo: local
+    hooks:
+      - id: check-yaml
+        name: Check YAML
+        entry: check-yaml
+        language: system
+        types: [yaml]
+      - id: end-of-file-fixer
+        name: Fix end of files
+        entry: end-of-file-fixer
+        language: system
+        types: [text]
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        entry: trailing-whitespace-fixer
+        language: system
+        types: [text]
+      - id: project-lint
+        name: Project lint
+        entry: just lint
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: betterleaks
+        name: Detect hardcoded secrets
+        entry: betterleaks dir --redact .
+        language: system
+        pass_filenames: false
+        always_run: true

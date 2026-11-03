@@ -1,0 +1,25 @@
+{
+  "allow": [
+    "just check",
+    "just lint",
+    "just test",
+    "just fmt",
+    "just configure",
+    "just --list",
+    "just status",
+    "bash tests/*"
+  ],
+  "ask": [
+    "just setup",
+    "just doctor",
+    "just plan*",
+    "just smoke*"
+  ],
+  "deny": [
+    "just up*",
+    "just standup*",
+    "just bootstrap*",
+    "just site*",
+    "docker compose*"
+  ]
+}

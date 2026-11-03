@@ -157,7 +157,7 @@ else
   fi
 
   # ── Move outputs into place ───────────────────────────────────────────────
-  
+
   if [[ -f "${PREPARED}/vmlinuz" ]]; then
     mv "${PREPARED}/vmlinuz" "${ASSETS_DIR}/linux26"
     echo "  [ok] vmlinuz -> linux26"
@@ -193,7 +193,7 @@ else
     mv "${PREPARED}/boot.ipxe" "${ASSETS_DIR}/autoexec.ipxe.generated"
     echo "  [ok] boot.ipxe -> autoexec.ipxe.generated"
   fi
-  
+
   # Proxmox 9.2.8 generates an ISO file alongside it.
   # The Linux kernel EFI stub (used in UEFI boot) CANNOT extract raw ISOs passed via initrd=.
   # It only extracts CPIO archives! So we must wrap the ISO into a CPIO archive.

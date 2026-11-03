@@ -1,0 +1,7 @@
+#:schema https://fnox.jdx.dev/schema.json
+import = [".config/fnox/provider.toml"]
+
+[secrets]
+# Bitwarden folder: "proj", item: "thinkcenter-cluster".
+# Each variable is a custom field. Always include provider = "vault".
+# EXAMPLE_TOKEN = { provider = "vault", value = "thinkcenter-cluster/EXAMPLE_TOKEN" }

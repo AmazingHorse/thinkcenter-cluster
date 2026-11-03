@@ -1,0 +1,5 @@
+[tools]
+"aqua:astral-sh/uv" = "0.13.5"
+"pipx:yamllint" = "1.38.0"
+"pipx:ansible-core" = "2.21.5"
+"pipx:ansible-lint" = { version = "26.10.1", uvx_args = "--with ansible-core==2.21.5" }

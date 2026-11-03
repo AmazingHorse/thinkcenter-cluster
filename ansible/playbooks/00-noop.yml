@@ -1,0 +1,9 @@
+---
+- name: Validate the infrastructure playbook toolchain
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Confirm the offline playbook can be parsed
+      ansible.builtin.debug:
+        msg: No infrastructure changes are requested.
