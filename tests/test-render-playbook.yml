@@ -1,0 +1,16 @@
+---
+- name: Render post-install templates for verification
+  hosts: proxmox_nodes
+  gather_facts: false
+  tasks:
+    - name: Render interfaces template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../ansible/roles/pve-network/templates/interfaces.j2"
+        dest: "{{ out_dir }}/interfaces-{{ inventory_hostname }}"
+      delegate_to: localhost
+
+    - name: Render corosync template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../ansible/roles/pve-cluster/templates/corosync.conf.j2"
+        dest: "{{ out_dir }}/corosync-{{ inventory_hostname }}"
+      delegate_to: localhost

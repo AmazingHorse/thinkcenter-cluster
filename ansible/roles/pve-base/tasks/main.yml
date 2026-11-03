@@ -48,7 +48,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: reload udev
+  notify: Reload udev
 
 - name: Flush handlers (apply udev rules before network config)
   ansible.builtin.meta: flush_handlers
@@ -83,7 +83,7 @@
     group: root
     mode: "0644"
   when: enable_zram_swap | default(true)
-  notify: restart zramswap
+  notify: Restart zramswap
 
 - name: Ensure zramswap service is enabled and started
   ansible.builtin.systemd:
@@ -91,13 +91,16 @@
     enabled: true
     state: started
   when: enable_zram_swap | default(true)
-  ignore_errors: true
+  failed_when: false
 
 - name: Set CPU scaling governor
-  ansible.builtin.shell:
-    cmd: "echo {{ cpu_governor | default('powersave') }} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+  ansible.builtin.shell: |
+    set -o pipefail
+    echo {{ cpu_governor | default('powersave') }} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+  args:
+    executable: /bin/bash
   changed_when: false
-  ignore_errors: true
+  failed_when: false
 
 - name: Disable unused PVE services to save RAM and CPU
   ansible.builtin.systemd:
@@ -107,7 +110,7 @@
   loop:
     - spiceproxy
   when: disable_unused_pve_services | default(true)
-  ignore_errors: true
+  failed_when: false
 
 - name: Disable PVE HA services when HA disabled
   ansible.builtin.systemd:
@@ -120,4 +123,4 @@
   when:
     - disable_unused_pve_services | default(true)
     - not (pve_ha_enabled | default(false))
-  ignore_errors: true
+  failed_when: false

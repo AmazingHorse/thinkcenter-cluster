@@ -8,7 +8,7 @@ totem {
         linknumber: 0
         knet_transport: udp
     }
-{% if corosync_ring1_iface is not none %}
+{% if corosync_ring1_enabled | default(true) %}
     interface {
         linknumber: 1
         knet_transport: udp
@@ -22,7 +22,7 @@ nodelist {
         name: {{ host }}
         nodeid: {{ loop.index }}
         ring0_addr: {{ hostvars[host]['ansible_host'] }}
-{% if corosync_ring1_iface is not none %}
+{% if corosync_ring1_enabled | default(true) %}
         ring1_addr: {{ hostvars[host]['corosync_ring1_addr'] }}
 {% endif %}
     }

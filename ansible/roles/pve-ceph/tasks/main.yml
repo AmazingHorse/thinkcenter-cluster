@@ -34,6 +34,9 @@
     - name: Add monitors on remaining nodes
       ansible.builtin.command:
         cmd: pveceph mon create
+      args:
+        creates: /var/lib/ceph/mon
+      changed_when: true
       delegate_to: "{{ item }}"
       loop: "{{ groups['proxmox_workers'] | intersect(ansible_play_hosts) }}"
       # Only targets workers that are actually reachable in this play run.

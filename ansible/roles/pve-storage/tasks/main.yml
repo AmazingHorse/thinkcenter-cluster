@@ -6,7 +6,7 @@
     regexp: "^options zfs zfs_arc_max"
     create: true
     mode: "0644"
-  notify: update initramfs
+  notify: Update initramfs
   when: (os_filesystem | default('zfs')) == 'zfs'
 
 - name: Configure Ceph OSD partition (interim profile)
@@ -20,11 +20,13 @@
     - name: Create partition 4 for Ceph OSD (only if not present)
       ansible.builtin.command:
         cmd: "parted -s {{ ceph_osd_disk }} -- mkpart ceph-osd {{ os_hdsize_gb | default(64) }}GiB 100%"
+      changed_when: true
       when: not ceph_part_stat.stat.exists
 
     - name: Run partprobe to inform kernel of partition changes
       ansible.builtin.command:
         cmd: "partprobe {{ ceph_osd_disk }}"
+      changed_when: true
       when: not ceph_part_stat.stat.exists
 
 - name: No additional partitioning needed (target_nvme_ssd profile)

@@ -1,15 +1,15 @@
 ---
-- name: reload udev
+- name: Reload udev
   ansible.builtin.command:
     cmd: udevadm control --reload-rules
   changed_when: false
 
-- name: trigger udev
+- name: Trigger udev
   ansible.builtin.command:
     cmd: udevadm trigger --subsystem-match=net --action=add
   changed_when: false
 
-- name: restart zramswap
+- name: Restart zramswap
   ansible.builtin.systemd:
     name: zramswap
     state: restarted
