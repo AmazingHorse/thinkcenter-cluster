@@ -7,8 +7,8 @@
 # zfs_arc_max_mb: 1024
 
 # Ceph OSD memory target (bytes) — 1 GB per OSD is recommended minimum.
-ceph_osd_memory_target: "1073741824"
-ceph_mon_memory_target: "536870912"   # 512 MB
+ceph_osd_memory_target: "805306368"     # 768 MiB (economized for 8 GB Xeon nodes)
+ceph_mon_memory_target: "536870912"     # 512 MB
 
-# Proxmox HA — enable on all nodes.
-pve_ha_enabled: true
+# Proxmox HA — disabled by default; Kubernetes manages pod/workload HA
+pve_ha_enabled: false

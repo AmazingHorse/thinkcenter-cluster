@@ -7,24 +7,25 @@
     create: true
     mode: "0644"
   notify: update initramfs
+  when: (os_filesystem | default('zfs')) == 'zfs'
 
-- name: Configure Ceph OSD partition (interim_single_ssd profile)
-  when: storage_profile == 'interim_single_ssd'
+- name: Configure Ceph OSD partition (interim profile)
+  when: storage_profile in ['interim', 'interim_single_ssd']
   block:
-    - name: Check existing disk partitions
-      ansible.builtin.command:
-        cmd: "parted -s {{ ceph_osd_disk }} print"
-      register: disk_parted_info
-      changed_when: false
+    - name: Check if Ceph OSD partition device exists
+      ansible.builtin.stat:
+        path: "{{ ceph_osd_partition }}"
+      register: ceph_part_stat
 
-    - name: Create partition 2 for Ceph OSD (only if not present)
+    - name: Create partition 4 for Ceph OSD (only if not present)
       ansible.builtin.command:
-        cmd: >
-          parted -s {{ ceph_osd_disk }} --
-          mkpart primary 50% 100%
-      when: "'2 ' not in disk_parted_info.stdout"
-      # Note: Partition 1 (ZFS rpool) was created by Proxmox ISO installer.
-      # This safely creates Partition 2 from 50% to 100% for Ceph OSD only if missing.
+        cmd: "parted -s {{ ceph_osd_disk }} -- mkpart ceph-osd {{ os_hdsize_gb | default(64) }}GiB 100%"
+      when: not ceph_part_stat.stat.exists
+
+    - name: Run partprobe to inform kernel of partition changes
+      ansible.builtin.command:
+        cmd: "partprobe {{ ceph_osd_disk }}"
+      when: not ceph_part_stat.stat.exists
 
 - name: No additional partitioning needed (target_nvme_ssd profile)
   when: storage_profile == 'target_nvme_ssd'

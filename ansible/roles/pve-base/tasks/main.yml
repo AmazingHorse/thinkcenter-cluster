@@ -13,7 +13,7 @@
 
 - name: Add no-subscription repository
   ansible.builtin.apt_repository:
-    repo: "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription"
+    repo: "deb http://download.proxmox.com/debian/pve trixie pve-no-subscription"
     state: present
     filename: pve-no-subscription
   when: pve_add_no_subscription_repo
@@ -27,7 +27,7 @@
 - name: Install required packages
   ansible.builtin.apt:
     name:
-      - frr          # FRRouting — dormant until pve_sdn_enabled=true
+      - frr          # FRRouting — used for cluster mesh OSPF
       - frr-pythontools
       - udev
       - curl
@@ -35,7 +35,11 @@
       - htop
       - iotop
       - nvme-cli
-    state: present
+      - zram-tools
+      - cpufrequtils
+      - ethtool
+      - iperf3
+      - lm-sensors
 
 - name: Deploy udev NIC naming rules
   ansible.builtin.template:
@@ -65,4 +69,55 @@
     name: frr
     enabled: false
     state: stopped
-  when: not pve_sdn_enabled
+  when: not (pve_sdn_enabled | default(false)) and not (ospf_enabled | default(true))
+
+- name: Configure zram swap for RAM cushion
+  ansible.builtin.copy:
+    dest: /etc/default/zramswap
+    content: |
+      # Configured by Ansible for ThinkCentre Xeon cluster
+      ALGO=zstd
+      PERCENT=25
+      PRIORITY=100
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_zram_swap | default(true)
+  notify: restart zramswap
+
+- name: Ensure zramswap service is enabled and started
+  ansible.builtin.systemd:
+    name: zramswap
+    enabled: true
+    state: started
+  when: enable_zram_swap | default(true)
+  ignore_errors: true
+
+- name: Set CPU scaling governor
+  ansible.builtin.shell:
+    cmd: "echo {{ cpu_governor | default('powersave') }} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+  changed_when: false
+  ignore_errors: true
+
+- name: Disable unused PVE services to save RAM and CPU
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - spiceproxy
+  when: disable_unused_pve_services | default(true)
+  ignore_errors: true
+
+- name: Disable PVE HA services when HA disabled
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - pve-ha-crm
+    - pve-ha-lrm
+  when:
+    - disable_unused_pve_services | default(true)
+    - not (pve_ha_enabled | default(false))
+  ignore_errors: true

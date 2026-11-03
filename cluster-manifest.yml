@@ -8,8 +8,13 @@ cluster:
   ceph_version: "tentacle"
   management_subnet: "192.168.50.0/24"
   management_gateway: "192.168.50.1"      # Your router IP
+  dns_server: "192.168.50.1"
   boot_server_ip: "192.168.50.206"          # Your workstation IP running boot stack
 
+  # Low-power Intel Xeon cluster economization
+  cpu_governor: "powersave"          # intel_pstate powersave + balance_power EPP (~8-10W idle on Xeon)
+  enable_zram_swap: true             # 2GB zstd compressed RAM swap to prevent OOM during Ceph/K8s spikes
+  disable_unused_pve_services: true  # Stop spiceproxy and pve-ha-lrm/crm (K8s handles workload HA)
   # COLLECT: Copy SHA256 from https://www.proxmox.com/en/downloads
   pve_iso_sha256: "4e88fe416df9b527624a175f24c9aa07c714d3332afb1ee3dbf3879573ef2c6c"
 
@@ -24,13 +29,15 @@ nodes:
     # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
     mac: "80:86:F2:18:55:B6"
     ip: "192.168.50.10"
+    ram_gb: 16
     ram_mb: 16384
-    storage_profile: "interim_single_ssd"   # "interim_single_ssd" or "target_nvme_ssd" when nvme present
+    zfs_arc_max_mb: 1024
+    storage_profile: "interim"
+    os_filesystem: "zfs"              # "ext4" can be chosen to save 512-1024 MB ARC RAM on 8 GB nodes
+    os_hdsize_gb: 64
     os_disk: "/dev/sda"
     ceph_osd_disk: "/dev/sda"
-    ceph_osd_partition: "/dev/sda2"
-    zfs_arc_max_mb: 2457
-
+    ceph_osd_partition: "/dev/sda4"
     # PRE-SET: Point-to-Point Mesh Links (No edits needed unless changing subnets)
     corosync_ring1_addr: "10.10.12.1"
     links:
@@ -62,13 +69,15 @@ nodes:
     # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
     mac: "AA:BB:CC:DD:EE:02"
     ip: "192.168.50.11"
+    ram_gb: 8
     ram_mb: 8192
-    storage_profile: "interim_single_ssd"
+    zfs_arc_max_mb: 512
+    storage_profile: "interim"
+    os_filesystem: "zfs"
+    os_hdsize_gb: 64
     os_disk: "/dev/sda"
     ceph_osd_disk: "/dev/sda"
-    ceph_osd_partition: "/dev/sda2"
-    zfs_arc_max_mb: 1228
-
+    ceph_osd_partition: "/dev/sda4"
     corosync_ring1_addr: "10.10.12.2"
     links:
       - iface: "eth-cluster-a"              # USB NIC -> connected to pve01
@@ -98,13 +107,15 @@ nodes:
     # COLLECT: Power on -> Press F1 (BIOS) -> Network -> Read Built-in 1G MAC
     mac: "AA:BB:CC:DD:EE:03"
     ip: "192.168.50.12"
+    ram_gb: 8
     ram_mb: 8192
-    storage_profile: "interim_single_ssd"
+    zfs_arc_max_mb: 512
+    storage_profile: "interim"
+    os_filesystem: "zfs"
+    os_hdsize_gb: 64
     os_disk: "/dev/sda"
     ceph_osd_disk: "/dev/sda"
-    ceph_osd_partition: "/dev/sda2"
-    zfs_arc_max_mb: 1228
-
+    ceph_osd_partition: "/dev/sda4"
     corosync_ring1_addr: "10.10.13.2"
     links:
       - iface: "eth-cluster-a"              # USB NIC -> connected to pve01

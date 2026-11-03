@@ -1,5 +1,6 @@
 # Project-specific recipes for thinkcenter-cluster.
 # Standard verbs (setup, check, lint, fmt, doctor) live in .config/just/base.just and archetype.just.
+export ANSIBLE_CONFIG := justfile_directory() / "ansible" / "ansible.cfg"
 
 boot_dir := justfile_directory() / "boot"
 ansible_dir := justfile_directory() / "ansible"

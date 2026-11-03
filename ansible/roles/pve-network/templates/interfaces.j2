@@ -1,34 +1,34 @@
 # Managed by Ansible — pve-network role
 # Full-mesh cluster fabric: eth-cluster-a and eth-cluster-b are direct peer links.
-# eth-mgmt connects to LAN switch and carries management, Corosync ring 0, and VMs.
+# eth-mgmt connects to LAN switch and carries management, Corosync ring 0, and VMs via vmbr0.
 
 auto lo
 iface lo inet loopback
 
-# ── Management + Corosync ring 0 + VM bridge ──────────────────────────────────
+# ── Management physical NIC (enslaved to VM bridge) ───────────────────────────
 auto {{ nic_mgmt }}
-iface {{ nic_mgmt }} inet static
-    address {{ ansible_host }}/24
-    gateway {{ management_gateway }}
-{% if vlan_id_mgmt is not none %}
-    vlan-id {{ vlan_id_mgmt }}
-{% endif %}
+iface {{ nic_mgmt }} inet manual
 
+# ── Management + Corosync ring 0 + VM bridge ──────────────────────────────────
 auto {{ vm_bridge }}
-iface {{ vm_bridge }} inet manual
+iface {{ vm_bridge }} inet static
+    address {{ ansible_host }}/{{ management_subnet.split('/')[1] }}
+    gateway {{ management_gateway }}
     bridge-ports {{ nic_mgmt }}
     bridge-stp off
     bridge-fd 0
     bridge-vlan-aware yes
+{% if vlan_id_mgmt is not none and vlan_id_mgmt | length > 0 %}
+    vlan-id {{ vlan_id_mgmt }}
+{% endif %}
 # Note: VM bridge shares eth-mgmt during POC. Phase 3 SDN replaces this bridge.
 
 # ── Cluster fabric — direct peer links ────────────────────────────────────────
-# Point-to-point /30 subnets. OSPF (frr) redistributes routes between them.
+# Point-to-point /30 subnets. FRR OSPF routes between them.
 {% for link in cluster_links %}
 auto {{ link.iface }}
 iface {{ link.iface }} inet static
     address {{ link.local_ip }}/{{ link.prefix }}
     # Direct cable to {{ link.peer }}
-    post-up ip route add {{ ceph_network_cluster }} dev {{ link.iface }} scope link || true
 
 {% endfor %}

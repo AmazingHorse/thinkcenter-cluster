@@ -8,3 +8,8 @@
   ansible.builtin.command:
     cmd: udevadm trigger --subsystem-match=net --action=add
   changed_when: false
+
+- name: restart zramswap
+  ansible.builtin.systemd:
+    name: zramswap
+    state: restarted

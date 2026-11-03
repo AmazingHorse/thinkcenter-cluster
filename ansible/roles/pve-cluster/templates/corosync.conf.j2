@@ -23,7 +23,7 @@ nodelist {
         nodeid: {{ loop.index }}
         ring0_addr: {{ hostvars[host]['ansible_host'] }}
 {% if corosync_ring1_iface is not none %}
-        ring1_addr: {{ hostvars[host]['ansible_host'] }}
+        ring1_addr: {{ hostvars[host]['corosync_ring1_addr'] }}
 {% endif %}
     }
 {% endfor %}
