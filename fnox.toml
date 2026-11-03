@@ -1,0 +1,12 @@
+#:schema https://fnox.jdx.dev/schema.json
+root = true
+import = [".config/fnox/provider.toml"]
+default_provider = "vault"
+env = "exec"
+if_missing = "error"
+
+[secrets]
+# Bitwarden: folder "proj", item "thinkcenter-cluster", custom fields below.
+PROXMOX_ROOT_PASSWORD = { provider = "vault", value = "thinkcenter-cluster/PROXMOX_ROOT_PASSWORD" }
+PROXMOX_API_TOKEN_ID = { provider = "vault", value = "thinkcenter-cluster/PROXMOX_API_TOKEN_ID" }
+PROXMOX_API_TOKEN_SECRET = { provider = "vault", value = "thinkcenter-cluster/PROXMOX_API_TOKEN_SECRET" }

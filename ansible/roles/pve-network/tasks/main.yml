@@ -6,7 +6,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart networking
+  notify: Restart networking
 
 - name: Enable OSPF daemon in frr
   ansible.builtin.lineinfile:
@@ -14,7 +14,7 @@
     regexp: "^ospfd="
     line: "ospfd=yes"
   when: ospf_enabled
-  notify: restart frr
+  notify: Restart frr
 
 - name: Deploy frr OSPF config
   ansible.builtin.template:
@@ -24,7 +24,7 @@
     group: frr
     mode: "0640"
   when: ospf_enabled
-  notify: restart frr
+  notify: Restart frr
 
 - name: Enable and start frr
   ansible.builtin.systemd:

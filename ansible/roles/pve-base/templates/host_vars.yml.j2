@@ -8,6 +8,8 @@ storage_profile: "{{ item.storage_profile }}"
 os_disk: "{{ item.os_disk }}"
 ceph_osd_disk: "{{ item.ceph_osd_disk }}"
 ceph_osd_partition: "{{ item.ceph_osd_partition }}"
+os_filesystem: "{{ item.os_filesystem | default('zfs') }}"
+os_hdsize_gb: {{ item.os_hdsize_gb | default(64) }}
 
 zfs_arc_max_mb: {{ item.zfs_arc_max_mb }}
 

@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier; do NOT edit manually
+_commit: v0.1.0
+_src_path: gh:AmazingHorse/copier-base
+bw_backend: rbw
+bw_profile: ''
+ci: true
+description: ''
+license: MIT
+owner: AmazingHorse
+project_name: thinkcenter-cluster
+project_slug: thinkcenter-cluster
+secrets_folder: proj

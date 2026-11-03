@@ -97,17 +97,13 @@ run_prepare_iso() {
   local base=(prepare-iso "${iso}" --fetch-from http --url "${url}" --tmp "${out}")
 
   if "${binary}" "${base[@]}" --pxe-loader ipxe --output "${out}" 2>/dev/null; then
-    echo "  [ok] prepared with --pxe-loader ipxe (self-contained PXE initrd)"
+    echo "  [ok] prepared with --pxe-loader ipxe"
   elif "${binary}" "${base[@]}" --pxe --output "${out}" 2>/dev/null; then
-    echo "  [ok] prepared with --pxe (self-contained PXE initrd)"
+    echo "  [ok] prepared with --pxe"
+  elif "${binary}" "${base[@]}" --output "${out}/proxmox-prepared.iso" 2>/dev/null; then
+    echo "  [ok] prepared with standard ISO output"
   else
-    echo "ERROR: proxmox-auto-install-assistant does not support --pxe-loader or --pxe" >&2
-    echo "       This version cannot produce a self-contained PXE initrd." >&2
-    echo "       PXE boot will fail with 'ISO not found on block device'." >&2
-    echo "       Install from pvetest repo to get a supported version:" >&2
-    echo "         echo 'deb http://download.proxmox.com/debian/pve bookworm pvetest'" >&2
-    echo "           > /etc/apt/sources.list.d/pve.list" >&2
-    echo "         apt update && apt install proxmox-auto-install-assistant" >&2
+    echo "ERROR: proxmox-auto-install-assistant failed to prepare ISO" >&2
     return 1
   fi
 }
@@ -131,9 +127,8 @@ fetch_if_missing "${IPXE_SNP_URL}" "${ASSETS_DIR}/snponly.efi"
 #   Build once with: docker compose -f boot/docker-compose.yml build prepare-pxe
 echo "==> Preparing PXE kernel + initrd via proxmox-auto-install-assistant"
 
-if [[ -f "${ASSETS_DIR}/linux26" && -f "${ASSETS_DIR}/initrd.img" ]]; then
-  echo "  [skip] linux26 and initrd.img already present (delete to re-prepare)"
-else
+if [[ -f "${ASSETS_DIR}/linux26" && -f "${ASSETS_DIR}/initrd.img" && -f "${ASSETS_DIR}/proxmox.iso.cpio" ]]; then
+  echo "  [skip] linux26, initrd.img, and proxmox.iso.cpio already present (delete to re-prepare)"
   echo "  [info] answer URL baked in: ${ANSWER_URL}"
   PREPARED="${ASSETS_DIR}/pxe-prepared"
   mkdir -p "${PREPARED}"
@@ -157,7 +152,7 @@ else
   fi
 
   # ── Move outputs into place ───────────────────────────────────────────────
-  
+
   if [[ -f "${PREPARED}/vmlinuz" ]]; then
     mv "${PREPARED}/vmlinuz" "${ASSETS_DIR}/linux26"
     echo "  [ok] vmlinuz -> linux26"
@@ -193,17 +188,35 @@ else
     mv "${PREPARED}/boot.ipxe" "${ASSETS_DIR}/autoexec.ipxe.generated"
     echo "  [ok] boot.ipxe -> autoexec.ipxe.generated"
   fi
-  
-  # Proxmox 9.2.8 generates an ISO file alongside it.
-  # The Linux kernel EFI stub (used in UEFI boot) CANNOT extract raw ISOs passed via initrd=.
-  # It only extracts CPIO archives! So we must wrap the ISO into a CPIO archive.
-  if ls "${PREPARED}"/*.iso >/dev/null 2>&1; then
-    echo "  [cpio] Appending ISO as CPIO archive directly to initrd.img to save disk space..."
-    mv "${PREPARED}"/*.iso "${PREPARED}/proxmox.iso"
-    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o >> "${ASSETS_DIR}/initrd.img")
-    echo "  [ok] ISO successfully packed into initrd.img"
+
+  # Check if initrd.img is zstd compressed; if so, recompress to gzip for universal UEFI / iPXE compatibility
+  if command -v zstd >/dev/null 2>&1 && zstd -t "${ASSETS_DIR}/initrd.img" 2>/dev/null; then
+    echo "  [recompress] converting initrd.img from zstd to gzip..."
+    zstd -d -c "${ASSETS_DIR}/initrd.img" | gzip -1 > "${ASSETS_DIR}/initrd.img.gz"
+    mv "${ASSETS_DIR}/initrd.img.gz" "${ASSETS_DIR}/initrd.img"
+    echo "  [ok] initrd.img recompressed to gzip"
   fi
 
+  # Standalone CPIO archive for UEFI PXE boot
+  ISO_FOUND=$(ls "${PREPARED}"/*.iso 2>/dev/null | head -n1 || true)
+  if [[ -n "${ISO_FOUND}" ]]; then
+    # Retain full prepared ISO for USB installation fallback
+    cp -f "${ISO_FOUND}" "${ASSETS_DIR}/proxmox-prepared.iso"
+    echo "  [ok] proxmox-prepared.iso saved (USB fallback)"
+
+    mv "${ISO_FOUND}" "${PREPARED}/proxmox.iso"
+    if command -v xorriso >/dev/null 2>&1; then
+      echo "  [slim] stripping /boot from proxmox.iso to economize RAM..."
+      xorriso -indev "${PREPARED}/proxmox.iso" -outdev "${PREPARED}/proxmox-slim.iso" -rm_r /boot -- -commit 2>/dev/null || true
+      if [[ -f "${PREPARED}/proxmox-slim.iso" ]]; then
+        mv "${PREPARED}/proxmox-slim.iso" "${PREPARED}/proxmox.iso"
+      fi
+    fi
+
+    echo "  [cpio] packing standalone proxmox.iso.cpio archive..."
+    (cd "${PREPARED}" && echo "proxmox.iso" | cpio -H newc -o > "${ASSETS_DIR}/proxmox.iso.cpio")
+    echo "  [ok] proxmox.iso.cpio created"
+  fi
   rm -rf "${PREPARED}"
   echo "  [ok] PXE kernel + initrd ready"
 fi

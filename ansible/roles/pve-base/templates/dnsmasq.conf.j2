@@ -1,15 +1,19 @@
 # Auto-generated from cluster-manifest.yml via Ansible 00-generate-boot-config.yml
+# DO NOT EDIT DIRECTLY — Edit cluster-manifest.yml at root instead
 
 interface=eth0
-dhcp-range={{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.100') }},{{ cluster.management_subnet | ansible.utils.ipaddr('net') | regex_replace('\.0/.*$', '.199') }},12h
+bind-dynamic
+dhcp-range={{ cluster.management_subnet.split('/')[0] }},static,{{ cluster.management_netmask | default('255.255.255.0') }},12h
+dhcp-ignore=tag:!known
 dhcp-option=option:router,{{ cluster.management_gateway }}
-dhcp-option=option:netmask,255.255.255.0
-dhcp-option=option:dns-server,{{ cluster.management_gateway }}
-# Proxmox VE automated installer answer URL (DHCP Option 224)
-dhcp-option=224,"http://{{ cluster.boot_server_ip }}:8080/assets/answers/"
+dhcp-option=option:dns-server,{{ cluster.dns_server | default(cluster.management_gateway) }}
+dhcp-option=option:domain-name,{{ cluster.domain }}
+
+# Proxmox HTTP answer URL via DHCP Option 250 (per-node and global fallback)
+dhcp-option=250,http://{{ cluster.boot_server_ip }}:8080/assets/answers/
 
 {% for node in nodes %}
-dhcp-host={{ node.mac }},{{ node.ip }},{{ node.name }}
+dhcp-host={{ node.mac }},set:{{ node.name }},{{ node.ip }},{{ node.name }},12h
 {% endfor %}
 
 enable-tftp
@@ -17,27 +21,15 @@ tftp-root=/var/lib/boot/assets
 
 # Match UEFI vs Legacy BIOS clients
 dhcp-match=set:efi-x86_64,option:client-arch,7
-dhcp-match=set:efi-x64,option:client-arch,9
-dhcp-match=set:efi-bc,option:client-arch,6
+dhcp-match=set:efi-x86_64,option:client-arch,9
+dhcp-match=set:efi-x86_64,option:client-arch,6
 
-# iPXE detection (Option 175 + User-Class)
+# iPXE detection (Option 175)
 dhcp-match=set:ipxe,175
-dhcp-userclass=set:ipxe,iPXE
-dhcp-userclass=set:ipxe,ipxe
 
-# Explicit Option 66 (Next Server)
-dhcp-option=66,"{{ cluster.boot_server_ip }}"
-
-# Non-iPXE UEFI clients -> load ipxe.efi (full native drivers for Intel I219-LM)
-dhcp-boot=tag:!ipxe,tag:efi-x86_64,ipxe.efi
-dhcp-boot=tag:!ipxe,tag:efi-x64,ipxe.efi
-dhcp-boot=tag:!ipxe,tag:efi-bc,ipxe.efi
-
-# Non-iPXE Legacy BIOS clients -> load undionly.kpxe
-dhcp-boot=tag:!ipxe,tag:!efi-x86_64,tag:!efi-x64,tag:!efi-bc,undionly.kpxe
-
-# iPXE clients -> chainload autoexec.ipxe over HTTP
-dhcp-option=tag:ipxe,67,"http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe"
+# Boot filenames with explicit Next-Server (siaddr)
+dhcp-boot=tag:!ipxe,tag:!efi-x86_64,undionly.kpxe,,{{ cluster.boot_server_ip }}
+dhcp-boot=tag:!ipxe,tag:efi-x86_64,ipxe.efi,,{{ cluster.boot_server_ip }}
 dhcp-boot=tag:ipxe,http://{{ cluster.boot_server_ip }}:8080/autoexec.ipxe
 
 domain={{ cluster.domain }}

@@ -20,6 +20,6 @@
         path: /etc/hosts
         marker: "# {mark} ANSIBLE MANAGED — cluster nodes"
         block: |
-          192.168.50.10 pve01 pve01.cluster.local
-          192.168.50.11 pve02 pve02.cluster.local
-          192.168.50.12 pve03 pve03.cluster.local
+          {% for host in groups['proxmox_nodes'] %}
+          {{ hostvars[host]['ansible_host'] }} {{ host }} {{ host }}.{{ cluster_domain }}
+          {% endfor %}

@@ -1,0 +1,5 @@
+_commit: v0.1.1
+_src_path: gh:AmazingHorse/copier-infra-ops
+iac:
+- ansible
+live_targets: 192.168.50.0/24

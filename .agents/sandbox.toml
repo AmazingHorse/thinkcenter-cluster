@@ -1,0 +1,6 @@
+# Consumed by the agent sandbox launcher (part5 Phase 10). Until then: documentation of intent.
+network = "none"            # none | allowlist | full
+allow_domains = []
+allow_private = ["192.168.50.0/24"]          # CIDRs, e.g. live targets
+extra_rw_paths = []
+secrets = "fnox"            # secrets reach the sandbox only via fnox exec / fnox proxy rules

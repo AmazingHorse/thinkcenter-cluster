@@ -1,38 +1,27 @@
-# ── Boot assets & generated configs ──────────────────────────────────────────
+# Local secrets and agent decisions must never be committed.
+.env
+.env.*
+!.env.example
+fnox.local.toml
+fnox.*.local.toml
+.omp/permissions.local.json
+.omp/sessions/
+.mise.local.toml
+mise.local.toml
+__pycache__/
+.venv/
+*.pyc
+*.rej
+.DS_Store
+
+# thinkcenter-cluster generated boot & ansible artifacts
 boot/assets/
 boot/dnsmasq/dnsmasq.conf
-ansible/inventory/host_vars/
-
-# ── Secrets & keys ───────────────────────────────────────────────────────────
-*.vault-pass
-*.age
-*.key
-.age-key*
-
-# ── Ansible generated ────────────────────────────────────────────────────────
-ansible/.retry
-ansible/**/*.retry
-*.retry
-
-# ── Python / Ansible venv ────────────────────────────────────────────────────
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-.ansible/
-
-# ── Terraform ────────────────────────────────────────────────────────────────
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.backup
-terraform/*.tfvars
-terraform/override.tf
-terraform/override.tf.json
-
-# ── Editor / OS noise ────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-.idea/
-.vscode/settings.json
+boot/ipxe/autoexec.ipxe
+ansible/inventory/host_vars/*.yml
+ansible/inventory/known_hosts
+*.iso
+*.cpio
+*.img
+*.kpxe
+*.efi

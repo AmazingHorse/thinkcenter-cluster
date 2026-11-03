@@ -14,6 +14,7 @@
     - name: Initialize cluster
       ansible.builtin.command:
         cmd: "pvecm create {{ cluster_name }} --link0 {{ ansible_host }}"
+      changed_when: true
       when: "'cluster name' not in pvecm_status.stdout"
 
 - name: Join cluster (worker nodes)
@@ -32,6 +33,7 @@
           pvecm add {{ hostvars[groups['proxmox_primary'][0]]['ansible_host'] }}
           --link0 {{ ansible_host }}
           --force
+      changed_when: true
       when: "'cluster name' not in pvecm_status.stdout"
 
 - name: Tune Corosync
@@ -44,7 +46,7 @@
         owner: root
         group: www-data
         mode: "0640"
-      notify: restart corosync
+      notify: Restart corosync
 
 - name: Disarm HA (safe maintenance drain)
   when: cluster_action == 'disarm_ha'

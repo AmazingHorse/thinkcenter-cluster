@@ -5,21 +5,18 @@
 # Arguments:
 #   $1  ISO path inside container (e.g. /assets/proxmox-ve_9.2-1.iso)
 #   $2  Answer URL (e.g. http://192.168.50.206:8080/assets/answers/)
-#   $3  Output directory (e.g. /assets/pxe-prepared)
-#
-# Requires proxmox-auto-install-assistant with --pxe-loader ipxe support.
-# Install from pvetest repo — stable 8.4.6 (pve-no-subscription) does NOT
-# have this flag and produces only a small answer-fetch initrd, not the
-# self-contained PXE initrd that embeds the full installer squashfs.
-#
-# --tmp is set to the output dir so all temp files stay on the same filesystem
-# as the output (avoiding EXDEV/os-error-18 on Docker bind mounts).
+#   $3  Output directory inside container (e.g. /assets)
 
 set -euo pipefail
 
-ISO="$1"
-ANSWER_URL="$2"
-OUT="$3"
+ISO="${1:-}"
+ANSWER_URL="${2:-}"
+OUT="${3:-/assets}"
+
+if [[ -z "${ISO}" || -z "${ANSWER_URL}" ]]; then
+  echo "Usage: prepare-pxe <ISO_PATH> <ANSWER_URL> [OUT_DIR]" >&2
+  exit 1
+fi
 
 if [[ ! -f "${ISO}" ]]; then
   echo "ERROR: ISO not found at ${ISO}" >&2
@@ -27,48 +24,72 @@ if [[ ! -f "${ISO}" ]]; then
 fi
 
 mkdir -p "${OUT}"
-
-BASE_ARGS=(prepare-iso "${ISO}" --fetch-from http --url "${ANSWER_URL}" --tmp "${OUT}")
+TMP_WORK="${OUT}/.tmp_prepare"
+rm -rf "${TMP_WORK}"
+mkdir -p "${TMP_WORK}"
 
 echo "  [prepare-iso] running proxmox-auto-install-assistant..."
 proxmox-auto-install-assistant --version
 
-if proxmox-auto-install-assistant "${BASE_ARGS[@]}" --pxe-loader ipxe --output "${OUT}"; then
-  echo "  [ok] --pxe-loader ipxe (self-contained PXE initrd)"
+PREPARED_ISO="${TMP_WORK}/proxmox-prepared.iso"
 
-elif proxmox-auto-install-assistant "${BASE_ARGS[@]}" --pxe --output "${OUT}"; then
-  echo "  [ok] --pxe (self-contained PXE initrd)"
-
+# Prepare the ISO with the answer URL baked in for HTTP fetch mode
+if proxmox-auto-install-assistant prepare-iso "${ISO}" --fetch-from http --url "${ANSWER_URL}" --tmp "${TMP_WORK}" --output "${PREPARED_ISO}"; then
+  echo "  [ok] prepared ISO generated at ${PREPARED_ISO}"
 else
-  # Last resort: prepare ISO, extract boot/ files via 7z.
-  # WARNING: the resulting initrd.img will be small (~53 MB) and ONLY contains
-  # the HTTP answer-fetch logic. It does NOT embed the installer squashfs.
-  # Booting this over PXE will fail with "ISO not found on block device".
-  # Fix: rebuild the prepare-pxe Docker image using the pvetest repo.
-  echo "  [error] --pxe-loader ipxe / --pxe flags are not supported by this version" >&2
-  echo "  [error] The installed proxmox-auto-install-assistant cannot produce a" >&2
-  echo "          self-contained PXE initrd. Rebuild boot/prepare-pxe image with:" >&2
-  echo "          just build-tools --no-cache" >&2
-  echo "  [error] Ensure the Dockerfile uses the pvetest repo, not pve-no-subscription." >&2
+  echo "  [error] failed to run proxmox-auto-install-assistant prepare-iso" >&2
   exit 1
 fi
 
-# Sanity check: a proper PXE initrd should be several hundred MB (it embeds the
-# full squashfs). If we got a tiny file something is wrong.
-INITRD_SIZE=0
-if [[ -f "${OUT}/initrd.img" ]]; then
-  INITRD_SIZE=$(stat -c%s "${OUT}/initrd.img" 2>/dev/null || echo 0)
-elif [[ -f "${OUT}/boot/initrd.img" ]]; then
-  INITRD_SIZE=$(stat -c%s "${OUT}/boot/initrd.img" 2>/dev/null || echo 0)
+# Retain full prepared ISO for USB installation fallback
+cp -f "${PREPARED_ISO}" "${OUT}/proxmox-prepared.iso"
+echo "  [ok] copied full prepared ISO to ${OUT}/proxmox-prepared.iso (USB fallback)"
+
+# Extract /boot kernel (linux26) and initrd.img from the prepared ISO
+echo "  [extract] extracting kernel and initrd from prepared ISO..."
+7z x -y -o"${TMP_WORK}/extracted" "${PREPARED_ISO}" boot/ >/dev/null
+
+if [[ -f "${TMP_WORK}/extracted/boot/linux26" ]]; then
+  cp -f "${TMP_WORK}/extracted/boot/linux26" "${OUT}/linux26"
+elif [[ -f "${TMP_WORK}/extracted/boot/vmlinuz" ]]; then
+  cp -f "${TMP_WORK}/extracted/boot/vmlinuz" "${OUT}/linux26"
+else
+  echo "  [error] could not locate kernel in prepared ISO" >&2
+  exit 1
 fi
 
-# 100 MB threshold — a proper self-contained PXE initrd is ~1.7 GB
-MIN_SIZE=$(( 100 * 1024 * 1024 ))
-if [[ "${INITRD_SIZE}" -lt "${MIN_SIZE}" ]]; then
-  echo "  [warn] initrd.img is only $(( INITRD_SIZE / 1024 / 1024 )) MB — expected several hundred MB" >&2
-  echo "  [warn] This may be the answer-fetch-only initrd, not the self-contained PXE one." >&2
-  echo "  [warn] PXE boot will likely fail with 'ISO not found on block device'." >&2
+if [[ -f "${TMP_WORK}/extracted/boot/initrd.img" ]]; then
+  cp -f "${TMP_WORK}/extracted/boot/initrd.img" "${OUT}/initrd.img"
+else
+  echo "  [error] could not locate initrd.img in prepared ISO" >&2
+  exit 1
 fi
 
-echo "  [done] contents of ${OUT}:"
-ls -lh "${OUT}/"
+# Check compression format: recompress zstd to gzip for universal UEFI / iPXE compatibility
+if zstd -t "${OUT}/initrd.img" 2>/dev/null; then
+  echo "  [recompress] converting initrd.img from zstd to gzip..."
+  zstd -d -c "${OUT}/initrd.img" | gzip -1 > "${OUT}/initrd.img.gz"
+  mv "${OUT}/initrd.img.gz" "${OUT}/initrd.img"
+  echo "  [ok] initrd.img recompressed to gzip"
+fi
+
+# Create slimmed proxmox.iso by removing /boot (saves ~100 MiB RAM during PXE boot)
+cp -f "${PREPARED_ISO}" "${TMP_WORK}/proxmox.iso"
+if command -v xorriso >/dev/null 2>&1; then
+  echo "  [slim] stripping /boot from proxmox.iso..."
+  xorriso -indev "${TMP_WORK}/proxmox.iso" -outdev "${TMP_WORK}/proxmox-slim.iso" -rm_r /boot -- -commit 2>/dev/null || true
+  if [[ -f "${TMP_WORK}/proxmox-slim.iso" ]]; then
+    mv "${TMP_WORK}/proxmox-slim.iso" "${TMP_WORK}/proxmox.iso"
+  fi
+fi
+
+# Pack proxmox.iso into standalone CPIO archive proxmox.iso.cpio
+echo "  [cpio] packing proxmox.iso into proxmox.iso.cpio..."
+(cd "${TMP_WORK}" && echo "proxmox.iso" | cpio -H newc -o > "${OUT}/proxmox.iso.cpio")
+echo "  [ok] created ${OUT}/proxmox.iso.cpio"
+
+# Clean up temporary work files
+rm -rf "${TMP_WORK}"
+
+echo "  [done] PXE assets ready in ${OUT}:"
+ls -lh "${OUT}/linux26" "${OUT}/initrd.img" "${OUT}/proxmox.iso.cpio" "${OUT}/proxmox-prepared.iso"

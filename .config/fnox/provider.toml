@@ -1,0 +1,6 @@
+#:schema https://fnox.jdx.dev/schema.json
+[providers.vault]
+type = "bitwarden"
+backend = "rbw"
+folder = "proj"
+auth_command = "rbw unlock"
