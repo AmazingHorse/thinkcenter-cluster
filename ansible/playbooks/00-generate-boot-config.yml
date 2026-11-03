@@ -7,17 +7,10 @@
   gather_facts: false
   vars_files:
     - "{{ playbook_dir }}/../../cluster-manifest.yml"
+  vars:
+    proxmox_root_password: "{{ lookup('env', 'PROXMOX_ROOT_PASSWORD') | default('ProxmoxDefault123!', true) }}"
+    proxmox_ssh_public_key: "{{ lookup('env', 'PROXMOX_SSH_PUBLIC_KEY') | default('', true) }}"
   tasks:
-    - name: Check if secrets file exists
-      ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../secrets/vault.sops.yaml"
-      register: vault_file
-
-    - name: Load secrets if available
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../secrets/vault.sops.yaml"
-      when: vault_file.stat.exists
-
     - name: Ensure config & inventory directories exist
       ansible.builtin.file:
         path: "{{ item }}"
