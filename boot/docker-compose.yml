@@ -7,17 +7,18 @@
 services:
 
   nginx:
-    image: nginx:alpine
+    image: python:3.12-alpine
     restart: unless-stopped
     network_mode: host
+    command: ["python3", "/srv/boot_http_server.py", "--root", "/var/lib/boot", "--port", "8080"]
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./server/boot_http_server.py:/srv/boot_http_server.py:ro
       - ./assets:/var/lib/boot/assets:ro
-    # nginx serves:
+      - ./ipxe:/var/lib/boot/ipxe:ro
+    # boot_http_server serves:
     #   GET /autoexec.ipxe          → iPXE script
-    #   GET/POST /assets/answers/*  → per-node Proxmox answer TOML (HTTP POST mapped to 200 OK)
-    #   GET /assets/<file>          → PVE kernel (linux26), initrd.img, iPXE binaries
-
+    #   GET/POST /assets/answers/*  → per-node Proxmox answer TOML (inspects POST JSON MAC addresses)
+    #   GET /assets/<file>          → PVE kernel (linux26), initrd.img, proxmox.iso.cpio, iPXE binaries
   dnsmasq:
     image: strm/dnsmasq:latest
     restart: unless-stopped

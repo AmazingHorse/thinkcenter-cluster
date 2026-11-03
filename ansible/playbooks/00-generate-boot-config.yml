@@ -18,9 +18,9 @@
         mode: "0755"
       loop:
         - "{{ playbook_dir }}/../../boot/dnsmasq"
+        - "{{ playbook_dir }}/../../boot/ipxe"
         - "{{ playbook_dir }}/../../boot/assets/answers"
         - "{{ playbook_dir }}/../inventory/host_vars"
-
     - name: Render dnsmasq.conf
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/pve-base/templates/dnsmasq.conf.j2"
@@ -33,6 +33,12 @@
         dest: "{{ playbook_dir }}/../../boot/assets/autoexec.ipxe"
         mode: "0644"
         newline_sequence: '\n'
+
+    - name: Mirror autoexec.ipxe to boot/ipxe
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../boot/assets/autoexec.ipxe"
+        dest: "{{ playbook_dir }}/../../boot/ipxe/autoexec.ipxe"
+        mode: "0644"
 
     - name: Render Proxmox Answer TOML files (by MAC)
       ansible.builtin.template:
@@ -55,19 +61,20 @@
         mode: "0644"
       loop: "{{ nodes }}"
 
-    - name: Render proxmox-auto-installer-mode config
+    - name: Render default Proxmox Answer TOML fallback
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-auto-installer-mode.j2"
-        dest: "{{ playbook_dir }}/../../boot/assets/proxmox-auto-installer-mode"
+        src: "{{ playbook_dir }}/../roles/pve-base/templates/proxmox-answer.toml.j2"
+        dest: "{{ playbook_dir }}/../../boot/assets/answers/default.toml"
         mode: "0644"
+      vars:
+        item: "{{ nodes[0] }}"
 
-    - name: Check if initrd.img exists
-      ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../../boot/assets/initrd.img"
-      register: initrd_file
-
-    - name: Inject proxmox-auto-installer-mode into initrd.img ramdisk
-      ansible.builtin.shell: |
-        cd "{{ playbook_dir }}/../../boot/assets" && printf "proxmox-auto-installer-mode\n" | cpio -H newc -o >> initrd.img && rm -f proxmox-auto-installer-mode
-      when: initrd_file.stat.exists
-      ignore_errors: true
+    - name: Render known_hosts placeholder from cluster manifest
+      ansible.builtin.copy:
+        content: |
+          # Auto-generated from cluster-manifest.yml via Ansible 00-generate-boot-config.yml
+          {% for node in nodes %}
+          # {{ node.name }}.{{ cluster.domain }} {{ node.ip }}
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../inventory/known_hosts"
+        mode: "0644"

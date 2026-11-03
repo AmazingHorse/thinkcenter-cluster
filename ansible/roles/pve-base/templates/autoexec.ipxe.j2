@@ -1,9 +1,11 @@
 #!ipxe
-echo Booting Proxmox VE automated installer over HTTP...
-kernel http://{{ cluster.boot_server_ip }}:8080/assets/linux26 initrd=initrd.img ramdisk_size=16777216 vga=788 ip=any:dhcp quiet proxmox-start-auto-installer || goto failed
-initrd http://{{ cluster.boot_server_ip }}:8080/assets/initrd.img initrd.img || goto failed
+echo Booting Proxmox VE {{ cluster.pve_version }} automated installer over HTTP...
+kernel http://{{ cluster.boot_server_ip }}:8080/assets/linux26 initrd=initrd.img initrd=proxmox.iso.cpio ramdisk_size=16777216 vga=788 ip=any:dhcp splash=verbose proxmox-start-auto-installer || goto failed
+initrd --name initrd.img http://{{ cluster.boot_server_ip }}:8080/assets/initrd.img || goto failed
+initrd --name proxmox.iso.cpio http://{{ cluster.boot_server_ip }}:8080/assets/proxmox.iso.cpio || goto failed
 boot || goto failed
 
 :failed
-echo iPXE boot failed. Pausing 30 seconds...
-sleep 30
+echo iPXE boot failed. Dropping to shell in 10 seconds...
+sleep 10
+shell

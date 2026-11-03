@@ -19,6 +19,10 @@ RUN apt-get update -qq && \
         gnupg \
         xorriso \
         p7zip-full \
+        cpio \
+        gzip \
+        zstd \
+        file \
     && rm -rf /var/lib/apt/lists/*
 
 # Add Proxmox trixie repo (stable)

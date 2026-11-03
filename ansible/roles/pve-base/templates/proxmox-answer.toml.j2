@@ -2,17 +2,31 @@
 # DO NOT EDIT DIRECTLY — Edit cluster-manifest.yml at root instead
 
 [global]
-keyboard = en-us
-country = us
-fqdn = {{ item.name }}.{{ cluster.domain }}
-mailto = ""
-timezone = America/New_York
-root_password = "{{ proxmox_root_password | default('ProxmoxDefault123!') }}"
+keyboard = "en-us"
+country = "us"
+fqdn = "{{ item.name }}.{{ cluster.domain }}"
+mailto = "root@{{ cluster.domain }}"
+timezone = "{{ cluster.timezone | default('America/New_York') }}"
+root-password = "{{ proxmox_root_password | default('ProxmoxDefault123!', true) }}"
+{% if proxmox_ssh_public_key | default('', true) | length > 0 %}
+root-ssh-keys = [
+    "{{ proxmox_ssh_public_key }}"
+]
+{% endif %}
 
 [network]
-source = from-dhcp
+source = "from-dhcp"
 
 [disk-setup]
-filesystem = zfs
-zfs.raid = single
-disk_list = {{ item.os_disk }}
+filesystem = "{{ item.os_filesystem | default('zfs') }}"
+disk-list = ["{{ item.os_disk | regex_replace('^/dev/', '') }}"]
+{% if (item.os_filesystem | default('zfs')) == 'zfs' %}
+zfs.raid = "raid0"
+zfs.hdsize = {{ item.os_hdsize_gb | default(64) }}
+zfs.arc-max = {{ item.zfs_arc_max_mb | default(512) }}
+zfs.compress = "zstd"
+{% else %}
+lvm.hdsize = {{ item.os_hdsize_gb | default(64) }}
+lvm.swapsize = 0
+lvm.maxvz = 0
+{% endif %}
