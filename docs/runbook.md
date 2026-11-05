@@ -10,10 +10,10 @@ Complete bring-up procedure from zero to a working 3-node Proxmox + Ceph cluster
 
 | Tool | Where |
 |---|---|
-| `age` + `age-keygen` | https://github.com/FiloSottile/age/releases |
-| `sops` | https://github.com/getsops/sops/releases |
-| `ansible` ≥ 2.17 | `pip install ansible` |
-| `just` | `apk add just` / `apt install just` |
+| `mise` | Installs pinned tools (`just install`, `pre-commit`, `ansible`) |
+| `fnox` | https://github.com/jdx/fnox — resolves secrets from Bitwarden |
+| `rbw` | Bitwarden CLI (vault login required once on your workstation) |
+| `just` | Command runner |
 | `docker` + `docker compose` | In boot server VM (Linux) |
 | `git` | On your workstation |
 
@@ -37,21 +37,23 @@ Complete bring-up procedure from zero to a working 3-node Proxmox + Ceph cluster
 
 ---
 
-## 2 — Secrets Setup (SOPS + age)
+## 2 — Secrets Setup (fnox + Bitwarden)
+
+Secrets are resolved at run time by `fnox` from the Bitwarden item
+`thinkcenter-cluster`. There are no encrypted files in the repo.
 
 ```bash
-# Generate age key (once on your workstation)
-age-keygen -o ~/.config/sops/age/keys.txt
+# Authenticate your local Bitwarden vault (once per shell/session)
+rbw unlock
 
-# Add public key to .sops.yaml
-nano .sops.yaml
+# Store the required custom fields on the vault item
+rbw edit thinkcenter-cluster
+#   PROXMOX_ROOT_PASSWORD       (installer root password)
+#   PROXMOX_API_TOKEN_ID        (optional, for API-driven workflows)
+#   PROXMOX_API_TOKEN_SECRET    (optional)
 
-# Create secrets file from template and set your root password
-cp ansible/secrets/vault.sops.yaml.example ansible/secrets/vault.sops.yaml
-nano ansible/secrets/vault.sops.yaml
-
-# Encrypt the secrets file
-sops --encrypt --in-place ansible/secrets/vault.sops.yaml
+# Live Ansible runs inject them via fnox
+just plan     # fnox exec -- ansible-playbook site.yml --check --diff
 ```
 
 ---
@@ -87,10 +89,9 @@ just logs
 2. Save & reboot — `pve01` PXE boots, receives HTTP answer file, installs Proxmox VE 9.2 unattended, and reboots.
 3. Once `pve01` boots into Proxmox, bootstrap `pve01` with Ansible:
    ```bash
-   cd ansible
-   ansible-playbook playbooks/site.yml --limit pve01
+   just bootstrap pve01   # wraps: fnox exec -- ansible-playbook site.yml --limit pve01
    ```
-   *(Note: Step 0 natively renders all boot server configs and `host_vars` directly from `cluster-manifest.yml`)*
+   *(Note: `just configure` natively renders all boot server configs and `host_vars` from `cluster-manifest.yml`)*
 
 ---
 
@@ -99,7 +100,7 @@ just logs
 1. Power on `pve02` and `pve03` to PXE boot and auto-install Proxmox.
 2. Once booted into Proxmox, run Ansible to join the nodes to the cluster and initialize Ceph storage:
    ```bash
-   ansible-playbook playbooks/site.yml
+   just site              # wraps: fnox exec -- ansible-playbook site.yml
    ```
 
 ---

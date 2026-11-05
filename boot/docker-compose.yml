@@ -32,7 +32,7 @@ services:
     # dnsmasq provides:
     #   DHCP with static leases (MAC → IP)
     #   TFTP root for iPXE binary
-    #   PXE option 66/67 pointing at matchbox HTTP
+    #   PXE option 66/67 pointing at the boot HTTP server (:8080)
 
   # One-shot build tool — NOT started by `just up` / `docker compose up`.
   # Usage: docker compose -f boot/docker-compose.yml run --rm prepare-pxe \

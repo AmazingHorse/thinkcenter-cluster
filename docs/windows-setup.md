@@ -123,7 +123,7 @@ nano cluster-manifest.yml
 # 2. Fetch PVE ISO and iPXE binaries (reads pve_version & sha256 from manifest)
 bash boot/scripts/fetch-assets.sh
 
-# 3. Render boot configs & matchbox groups
+# 3. Render boot configs, iPXE scripts, dnsmasq, and per-node answer TOMLs
 ansible-playbook ansible/playbooks/00-generate-boot-config.yml
 ```
 
@@ -153,8 +153,8 @@ Ansible requires a Linux/macOS control node. Options:
 ```bash
 # In WSL2 or the VM
 cd thinkcenter-cluster/ansible
-pip install ansible ansible-lint
-ansible-playbook playbooks/site.yml
+# Secrets are injected by fnox (Bitwarden item "thinkcenter-cluster")
+fnox exec -- ansible-playbook playbooks/site.yml
 ```
 
 ---
